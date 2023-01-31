@@ -1,11 +1,12 @@
 #![no_std]
 #![no_main]
-#![feature(asm_const)]
+#![feature(asm_const, naked_functions)]
 #![feature(panic_info_message, alloc_error_handler)]
 
 #[macro_use]
 extern crate log;
 
+mod arch;
 mod device;
 mod mm;
 mod logging;
