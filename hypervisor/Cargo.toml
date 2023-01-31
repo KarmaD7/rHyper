@@ -12,3 +12,4 @@ cfg-if = "1.0"
 tock-registers = "0.8"
 aarch64-cpu = "9.3"
 buddy_system_allocator = "0.8"
+bitmap-allocator = { git = "https://github.com/rcore-os/bitmap-allocator", rev = "88e871a" }

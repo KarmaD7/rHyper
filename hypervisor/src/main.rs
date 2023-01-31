@@ -6,10 +6,12 @@
 #[macro_use]
 extern crate log;
 
+#[macro_use]
+mod logging;
+
 mod arch;
 mod device;
 mod mm;
-mod logging;
 mod config;
 mod timer;
 
@@ -34,12 +36,24 @@ const LOGO: &str = r"
   /____/ \____/  /____/ /____/
 ";
 
+fn clear_bss() {
+    extern "C" {
+        fn sbss();
+        fn ebss();
+    }
+    unsafe {
+        core::slice::from_raw_parts_mut(sbss as usize as *mut u8, ebss as usize - sbss as usize).fill(0)
+    }
+}
+
 pub fn init_ok() -> bool {
     INIT_OK.load(Ordering::SeqCst)
 }
 
 fn main() {
+    clear_bss();
     device::init_early();
     println!("{}", LOGO);
     println!("Hello, world!");
+    arch::instructions::wait_for_ints();
 }
