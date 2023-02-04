@@ -50,7 +50,8 @@ pub fn init_ok() -> bool {
     INIT_OK.load(Ordering::SeqCst)
 }
 
-fn main() {
+#[no_mangle]
+fn rust_main() {
     clear_bss();
     device::init_early();
     println!("{}", LOGO);

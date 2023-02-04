@@ -16,8 +16,8 @@ unsafe fn switch_to_el2() {
           + SPSR_EL3::F::Masked,
     );
     ELR_EL3.set(LR.get());
+    asm::eret();
   }
-  asm::eret();
   // unimplemented!();
 }
 
@@ -38,7 +38,7 @@ unsafe extern "C" fn _start() -> ! {
         switch_to_el2 = sym switch_to_el2,
         // init_boot_page_table = sym init_boot_page_table,
         // init_mmu = sym init_mmu,
-        rust_main = sym crate::main,
+        rust_main = sym crate::rust_main,
         options(noreturn),
     )
 }
