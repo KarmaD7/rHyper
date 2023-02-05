@@ -19,7 +19,13 @@ endif
 
 OBJDUMP := rust-objdump -d --print-imm-hex --x86-asm-syntax=intel
 OBJCOPY := rust-objcopy --binary-architecture=$(ARCH)
-GDB := gdb-multiarch
+
+
+ifeq ($(shell uname), Darwin)
+	GDB := aarch64-none-elf-gdb
+else
+	GDB := gdb-multiarch
+endif
 
 qemu := qemu-system-$(ARCH)
 qemu_args := -nographic -m 128M
