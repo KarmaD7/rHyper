@@ -12,6 +12,7 @@ mod logging;
 mod arch;
 mod device;
 mod mm;
+mod hv;
 mod config;
 mod timer;
 
@@ -55,6 +56,24 @@ fn rust_main() {
     clear_bss();
     device::init_early();
     println!("{}", LOGO);
-    println!("Hello, world!");
-    arch::instructions::wait_for_ints();
+    println!(
+        "\
+        arch = {}\n\
+        build_mode = {}\n\
+        log_level = {}\n\
+        ",
+        option_env!("ARCH").unwrap_or(""),
+        option_env!("MODE").unwrap_or(""),
+        option_env!("LOG").unwrap_or(""),
+    );
+
+    mm::init_heap_early();
+    logging::init();
+    info!("Logging is enabled.");
+
+    mm::init();
+    INIT_OK.store(true, Ordering::SeqCst);
+    info!("Initialization completed.\n");
+    hv::run();
+    // arch::instructions::wait_for_ints();
 }

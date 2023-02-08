@@ -1,5 +1,5 @@
 ARCH ?= aarch64
-MODE ?= debug
+MODE ?= release
 LOG ?= warn
 
 qemu := qemu-system-$(ARCH)
