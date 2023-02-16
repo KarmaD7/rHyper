@@ -16,3 +16,4 @@ rvm/Cargo.lock
 .vscode
 .DS_Store
 *.asm
+*.ref

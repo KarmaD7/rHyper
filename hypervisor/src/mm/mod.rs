@@ -1,7 +1,7 @@
 pub mod address;
 
 mod heap;
-mod frame;
+pub mod frame;
 
 pub use address::{PhysAddr, VirtAddr};
 
