@@ -1,13 +1,14 @@
-use core::{marker::PhantomData, arch::asm};
+use core::{marker::PhantomData, arch::asm, mem::size_of};
 
-use aarch64_cpu::registers::ELR_EL2;
+use aarch64_cpu::registers::{ELR_EL2, VBAR_EL2};
 use tock_registers::interfaces::{Readable, Writeable};
 
 use crate::{GuestPhysAddr, RvmHal, RvmResult};
 
-use super::regs::GeneralRegisters;
+use super::{regs::GeneralRegisters, ArchPerCpuState};
 
 #[repr(C)]
+#[derive(Debug)]
 pub struct ArmVcpu<H: RvmHal> {
     guest_regs: GeneralRegisters,
     host_stack_top: u64,
@@ -15,22 +16,22 @@ pub struct ArmVcpu<H: RvmHal> {
 }
 
 impl<H: RvmHal> ArmVcpu<H> {
-    pub(crate) fn new(entry: GuestPhysAddr) -> RvmResult<Self> {
+    pub(crate) fn new(_percpu: &ArchPerCpuState<H>, entry: GuestPhysAddr) -> RvmResult<Self> {
         let mut vcpu = Self {
             guest_regs: GeneralRegisters::default(),
             host_stack_top: 0,
             _phantom_data: PhantomData,
         };
-        vcpu.setup()?;
+        vcpu.setup(entry)?;
         info!("[RVM] created ArmVcpu");
         Ok(vcpu)
     }
 
-    pub fn run() -> () {
+    pub fn run(&self) -> () {
         
     }
 
-    pub fn exit_info() -> RvmResult<ArmExitInfo> {
+    pub fn exit_info(&self) -> RvmResult<ArmExitInfo> {
         Ok(ArmExitInfo {
             exit_reason: ArmExitReason::HLT,
             guest_pc: 0,
@@ -45,13 +46,15 @@ impl<H: RvmHal> ArmVcpu<H> {
         &mut self.guest_regs
     }
 
-    pub fn advance_rip() -> RvmResult {
+    pub fn advance_rip(&self) -> RvmResult {
         Ok(ELR_EL2.set(ELR_EL2.get() + 4))
     }
 
-    fn setup(&mut self) -> RvmResult {
-        todo!()
+    fn setup(&mut self, entry: GuestPhysAddr) -> RvmResult {
+        VBAR_EL2.set(entry as u64);
+        Ok(())
     }
+
     #[naked]
     unsafe extern "C" fn vmx_launch(&mut self) -> ! {
         asm!(
@@ -61,7 +64,7 @@ impl<H: RvmHal> ArmVcpu<H> {
             "vmlaunch",
             "jmp    {failed}",
             host_stack_top = const size_of::<GeneralRegisters>(),
-            failed = sym Self::vmx_entry_failed,
+            failed = sym Self::vmentry_failed,
             options(noreturn),
         )
     }
@@ -80,9 +83,17 @@ impl<H: RvmHal> ArmVcpu<H> {
             "jmp    {failed}",
             host_stack_top = const size_of::<GeneralRegisters>(),
             vmexit_handler = sym Self::vmexit_handler,
-            failed = sym Self::vmx_entry_failed,
+            failed = sym Self::vmentry_failed,
             options(noreturn),
         );
+    }
+
+    fn vmentry_failed() -> ! {
+        panic!("vm entry failed")
+    }
+
+    fn vmexit_handler(&mut self) {
+        H::vmexit_handler(self);
     }
 }
 
@@ -162,8 +173,9 @@ pub enum ArmExitReason {
 }
 }
 
+#[derive(Debug)]
 pub struct ArmExitInfo {
-    exit_reason: ArmExitReason,
+    pub exit_reason: ArmExitReason,
 
     guest_pc: u64,
 }

@@ -1,3 +1,6 @@
+use rvm::RvmPerCpu;
+use self::hal::RvmHalImpl;
+
 mod hal;
 mod vmexit;
 
@@ -15,7 +18,7 @@ pub fn run() {
 }
 
 #[naked]
-unsafe extern "C" fn test_guest() -> ! {
+unsafe extern "C" fn test_guest() -> ! { 
     core::arch::asm!(
         "
         mov     x0, 0
@@ -24,8 +27,8 @@ unsafe extern "C" fn test_guest() -> ! {
         mov     x3, 3
         mov     x4, 3
     2:
-        hvc
-        add     x0, 1
+        hvc     #0
+        add     x0, x0, 1
         b       2b",
         options(noreturn),
     );

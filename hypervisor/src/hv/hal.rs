@@ -1,8 +1,10 @@
-use rvm::RvmHal;
+use rvm::{RvmHal, HostPhysAddr, HostVirtAddr, RvmVcpu};
 
 use crate::mm::{address, frame};
 
 use super::vmexit;
+
+#[derive(Debug)]
 pub struct RvmHalImpl;
 
 impl RvmHal for RvmHalImpl {
@@ -23,6 +25,6 @@ impl RvmHal for RvmHalImpl {
     }
 
     fn vmexit_handler(vcpu: &mut RvmVcpu<Self>) {
-        vmexit::vmexit_handler(vcpu)
+        vmexit::vmexit_handler(vcpu);
     }
 }
