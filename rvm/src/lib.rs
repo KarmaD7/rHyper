@@ -1,7 +1,7 @@
 #![no_std]
 #![feature(asm_const)]
 #![feature(concat_idents)]
-#![feature(naked_functions)]
+#![feature(naked_functions, fn_align)]
 
 #[macro_use]
 extern crate log;

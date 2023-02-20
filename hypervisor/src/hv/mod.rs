@@ -12,12 +12,13 @@ pub fn run() {
     percpu.hardware_enable().unwrap();
 
     let mut vcpu = percpu.create_vcpu(test_guest as usize).unwrap();
-    info!("{:#x?}", vcpu);
+    // info!("{:#x?}", vcpu);
     println!("Running guest...");
     vcpu.run();
 }
 
 #[naked]
+#[no_mangle]
 unsafe extern "C" fn test_guest() -> ! { 
     core::arch::asm!(
         "
@@ -28,7 +29,7 @@ unsafe extern "C" fn test_guest() -> ! {
         mov     x4, 3
     2:
         hvc     #0
-        add     x0, x0, 1
+        add     x1, x1, 1
         b       2b",
         options(noreturn),
     );
