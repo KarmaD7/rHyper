@@ -29,7 +29,7 @@ unsafe extern "C" fn test_guest() -> ! {
         mov     x4, 3
     2:
         hvc     #0
-        add     x1, x1, 1
+        add     x0, x0, 1
         b       2b",
         options(noreturn),
     );

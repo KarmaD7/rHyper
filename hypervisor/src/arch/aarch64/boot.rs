@@ -1,7 +1,21 @@
+use core::arch::global_asm;
+
 use aarch64_cpu::{asm, asm::barrier, registers::*};
 use tock_registers::interfaces::{ReadWriteable, Readable, Writeable};
 
+global_asm!(include_str!("trap.S"));
+
 unsafe fn switch_to_el2() {
+  extern "C" {
+    fn exception_vector_base();
+  }
+  VBAR_EL2.set(exception_vector_base as usize as _);
+  // Disable EL1 timer traps and the timer offset.
+  CNTHCTL_EL2.modify(CNTHCTL_EL2::EL1PCEN::SET + CNTHCTL_EL2::EL1PCTEN::SET);
+  CNTVOFF_EL2.set(0);
+  // Set EL1 to 64bit.
+  HCR_EL2.write(HCR_EL2::RW::EL1IsAarch64);
+
   SPSel.write(SPSel::SP::ELx);
   let current_el = CurrentEL.read(CurrentEL::EL);
   if current_el == 3 {
