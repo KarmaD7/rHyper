@@ -27,6 +27,7 @@ unsafe fn switch_to_el2() {
   // Disable EL1 timer traps and the timer offset.
   CNTHCTL_EL2.modify(CNTHCTL_EL2::EL1PCEN::SET + CNTHCTL_EL2::EL1PCTEN::SET);
   CNTVOFF_EL2.set(0);
+  HCR_EL2.write(HCR_EL2::FWB::Enabled + HCR_EL2::VM::Enable + HCR_EL2::RW::EL1IsAarch64 + HCR_EL2::AMO::SET + HCR_EL2::FMO::SET);
 
   SPSel.write(SPSel::SP::ELx);
   let current_el = CurrentEL.read(CurrentEL::EL);
@@ -61,7 +62,7 @@ unsafe fn init_mmu() {
       + TCR_EL2::ORGN0::WriteBack_ReadAlloc_WriteAlloc_Cacheable
       + TCR_EL2::IRGN0::WriteBack_ReadAlloc_WriteAlloc_Cacheable
       + TCR_EL2::T0SZ.val(16);
-  TCR_EL2.write(TCR_EL2::PS::Bits_48 + tcr_flags);
+  TCR_EL2.write(TCR_EL2::PS::Bits_40 + tcr_flags);
   barrier::isb(barrier::SY);
 
   // Set both TTBR0 and TTBR1

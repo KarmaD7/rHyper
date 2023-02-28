@@ -80,19 +80,11 @@ impl<H: RvmHal> ArmVcpu<H> {
             + TCR_EL1::ORGN0::WriteBack_ReadAlloc_WriteAlloc_Cacheable
             + TCR_EL1::IRGN0::WriteBack_ReadAlloc_WriteAlloc_Cacheable
             + TCR_EL1::T0SZ.val(16);
-        // let tcr_flags1 = TCR_EL1::EPD1::EnableTTBR1Walks
-        //     + TCR_EL1::TG1::KiB_4
-        //     + TCR_EL1::SH1::Inner
-        //     + TCR_EL1::ORGN1::WriteBack_ReadAlloc_WriteAlloc_Cacheable
-        //     + TCR_EL1::IRGN1::WriteBack_ReadAlloc_WriteAlloc_Cacheable
-        //     + TCR_EL1::T1SZ.val(16);
-        TCR_EL1.write(TCR_EL1::IPS::Bits_48 + tcr_flags0);
+        TCR_EL1.write(TCR_EL1::IPS::Bits_44 + tcr_flags0);
         barrier::isb(barrier::SY);
 
         TTBR0_EL1.set_baddr(root as u64);
         instructions::flush_tlb_all();
-
-        SCTLR_EL1.write(SCTLR_EL1::M::Enable + SCTLR_EL1::C::Cacheable + SCTLR_EL1::I::Cacheable);
     }
 
     pub fn set_stack_pointer(&mut self, sp: usize) {
@@ -100,27 +92,20 @@ impl<H: RvmHal> ArmVcpu<H> {
     }
 
     fn setup(&self, npt_root: HostPhysAddr) -> RvmResult {
-        let attr0 = MAIR_EL2::Attr0_Device::nonGathering_nonReordering_EarlyWriteAck;
-        // Normal memory
-        let attr1 = MAIR_EL2::Attr1_Normal_Inner::WriteBack_NonTransient_ReadWriteAlloc
-            + MAIR_EL2::Attr1_Normal_Outer::WriteBack_NonTransient_ReadWriteAlloc;
-        MAIR_EL2.write(attr0 + attr1); // 0xff_04
-
         let vtcr_flags = VTCR_EL2::TG0::Granule4KB 
             + VTCR_EL2::SH0::Inner
+            + VTCR_EL2::SL0.val(2)
             + VTCR_EL2::ORGN0::NormalWBRAWA
             + VTCR_EL2::IRGN0::NormalWBRAWA
-            + VTCR_EL2::T0SZ.val(16);
-        VTCR_EL2.write(VTCR_EL2::PS::PA_48B_256TB + vtcr_flags);
+            + VTCR_EL2::T0SZ.val(20);
+        VTCR_EL2.write(VTCR_EL2::PS::PA_44B_16TB + vtcr_flags);
         barrier::isb(barrier::SY);
         
         VTTBR_EL2.set_baddr(npt_root as _);
         instructions::flush_tlb_all();
-        
-        HCR_EL2.write(HCR_EL2::VM::Enable + HCR_EL2::RW::EL1IsAarch64 + HCR_EL2::AMO::SET + HCR_EL2::FMO::SET);
-        SCTLR_EL2.write(SCTLR_EL2::C::Cacheable + SCTLR_EL2::I::Cacheable);
+
+        SCTLR_EL1.write(SCTLR_EL1::M::Enable + SCTLR_EL1::C::Cacheable + SCTLR_EL1::I::Cacheable);
         instructions::flush_tlb_all();
-        debug!("npt root: {:x}", npt_root);
         Ok(())
     }
 

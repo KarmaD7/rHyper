@@ -106,7 +106,6 @@ pub fn run() -> ! {
 }
 
 unsafe extern "C" fn test_guest() -> ! {
-    
     for i in 0..100 {
         core::arch::asm!(
             "hvc #0",
@@ -117,6 +116,6 @@ unsafe extern "C" fn test_guest() -> ! {
             in("x4") 3,
         );
     }
-    // core::arch::asm!("mov qword ptr [$0xffff233], $2333"); // panic
+    // // core::arch::asm!("mov qword ptr [$0xffff233], $2333"); // panic
     loop {}
 }

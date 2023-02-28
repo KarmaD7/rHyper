@@ -121,15 +121,16 @@ impl From<MemFlags> for DescriptorAttr {
             attr |= Self::AP_RO;
         }
         if flags.contains(MemFlags::USER) {
-            attr |= Self::AP_EL0 | Self::PXN;
-            if !flags.contains(MemFlags::EXECUTE) {
-                attr |= Self::UXN;
-            }
+            attr |= Self::AP_EL0;
+            //  | Self::PXN;
+            // if !flags.contains(MemFlags::EXECUTE) {
+            //     attr |= Self::UXN;
+            // }
         } else {
-            attr |= Self::UXN;
-            if !flags.contains(MemFlags::EXECUTE) {
-                attr |= Self::PXN;
-            }
+            // attr |= Self::UXN;
+            // if !flags.contains(MemFlags::EXECUTE) {
+            //     attr |= Self::PXN;
+            // }
         }
         attr
     }
@@ -140,7 +141,7 @@ impl From<MemFlags> for DescriptorAttr {
 pub struct PageTableEntry(pub u64);
 
 impl PageTableEntry {
-    const PHYS_ADDR_MASK: usize = GuestPhysAddr::MAX & !(PAGE_SIZE - 1);
+    const PHYS_ADDR_MASK: usize = 0xffff_ffff_ffff & !(PAGE_SIZE - 1);
 
     pub const fn empty() -> Self {
         Self(0)

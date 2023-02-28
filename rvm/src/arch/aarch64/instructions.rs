@@ -49,7 +49,7 @@ pub unsafe fn set_user_page_table_root(root_paddr: usize) {
 
 #[inline]
 pub fn flush_tlb_all() {
-    unsafe { asm!("tlbi vmalls12e1; dsb sy; isb") };
+    unsafe { asm!("tlbi vmalls12e1is; dsb sy; isb") };
 }
 
 #[inline]

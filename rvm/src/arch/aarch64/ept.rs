@@ -53,8 +53,8 @@ bitflags::bitflags! {
 #[repr(u64)]
 #[derive(Debug, Clone, Copy, Eq, PartialEq)]
 enum MemType {
-    Device = 0,
-    Normal = 1,
+    Device = 1,
+    Normal = 15,
 }
 
 impl DescriptorAttr {
@@ -71,8 +71,8 @@ impl DescriptorAttr {
     fn mem_type(&self) -> MemType {
         let idx = (self.bits() & Self::ATTR_INDEX_MASK) >> 2;
         match idx {
-            0 => MemType::Device,
-            1 => MemType::Normal,
+            1 => MemType::Device,
+            15 => MemType::Normal,
             _ => panic!("Invalid memory attribute index"),
         }
     }
@@ -124,7 +124,7 @@ impl From<MemFlags> for DescriptorAttr {
 pub struct PageTableEntry(u64);
 
 impl PageTableEntry {
-    const PHYS_ADDR_MASK: usize = HostPhysAddr::MAX & !(PAGE_SIZE - 1);
+    const PHYS_ADDR_MASK: usize = 0xffff_ffff_ffff & !(PAGE_SIZE - 1);
 
     pub const fn empty() -> Self {
         Self(0)
@@ -143,7 +143,7 @@ impl GenericPTE for PageTableEntry {
         Self(attr.bits() | (paddr & Self::PHYS_ADDR_MASK) as u64)
     }
     fn new_table(paddr: HostPhysAddr) -> Self {
-        let attr = DescriptorAttr::NON_BLOCK | DescriptorAttr::VALID;
+        let attr = DescriptorAttr::NON_BLOCK | DescriptorAttr::VALID | DescriptorAttr::ATTR_INDX | DescriptorAttr::S2AP_R | DescriptorAttr::S2AP_W | DescriptorAttr::AF | DescriptorAttr::SHAREABLE | DescriptorAttr::INNER;
         Self(attr.bits() | (paddr & Self::PHYS_ADDR_MASK) as u64)
     }
     fn paddr(&self) -> HostPhysAddr {
