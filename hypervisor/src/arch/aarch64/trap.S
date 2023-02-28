@@ -63,7 +63,7 @@
     SAVE_REGS
     mov     x28, sp
     mov     x0,  sp
-    ldr     x29,  [sp, 272]
+    ldr     x29,  [sp, 272] // computed according to ArmVcpu
     mov     sp,  x29
     bl      vmexit_handler
     mov     sp, x28

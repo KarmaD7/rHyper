@@ -1,10 +1,11 @@
 use core::{marker::PhantomData, arch::{asm, global_asm}, mem::size_of};
 
-use aarch64_cpu::registers::{ELR_EL2, VBAR_EL2, SPSR_EL2, SP_EL1, ESR_EL2};
+use aarch64_cpu::registers::*;
+use aarch64_cpu::asm::barrier;
 use aarch64_cpu::registers::ESR_EL2::EC::Value as Value;
 use tock_registers::{interfaces::{Readable, Writeable}};
 
-use crate::{GuestPhysAddr, RvmHal, RvmResult};
+use crate::{GuestPhysAddr, RvmHal, RvmResult, HostPhysAddr, arch::aarch64::instructions};
 
 use super::{regs::GeneralRegisters, ArchPerCpuState};
 
@@ -20,7 +21,7 @@ pub struct ArmVcpu<H: RvmHal> {
 }
 
 impl<H: RvmHal> ArmVcpu<H> {
-    pub(crate) fn new(_percpu: &ArchPerCpuState<H>, entry: GuestPhysAddr) -> RvmResult<Self> {
+    pub(crate) fn new(_percpu: &ArchPerCpuState<H>, entry: GuestPhysAddr, npt_root: HostPhysAddr) -> RvmResult<Self> {
         let mut vcpu = Self {
             host_stack_top: 0,
             guest_regs: GeneralRegisters::default(),
@@ -33,14 +34,14 @@ impl<H: RvmHal> ArmVcpu<H> {
             + SPSR_EL2::F::Masked).into(),
             _phantom_data: PhantomData,
         };
-        vcpu.setup()?;
+        info!("npt root is {:x}.", npt_root);
+        vcpu.setup(npt_root)?;
         info!("[RVM] created ArmVcpu");
         Ok(vcpu)
     }
 
     // #[repr(align(128))]
     pub fn run(&mut self) -> ! {
-        self.setup().unwrap();
         unsafe { self.vmx_launch() }
     }
 
@@ -64,7 +65,62 @@ impl<H: RvmHal> ArmVcpu<H> {
         Ok(())
     }
 
-    fn setup(&self) -> RvmResult {
+    pub fn set_page_table_root(&self, root: usize) {
+        info!("TTBR0 set baddr {}", root);
+        let attr0 = MAIR_EL1::Attr0_Device::nonGathering_nonReordering_EarlyWriteAck;
+     // Normal memory
+        let attr1 = MAIR_EL1::Attr1_Normal_Inner::WriteBack_NonTransient_ReadWriteAlloc
+            + MAIR_EL1::Attr1_Normal_Outer::WriteBack_NonTransient_ReadWriteAlloc;
+        MAIR_EL1.write(attr0 + attr1); // 0xff_04
+
+        // Enable TTBR0 and TTBR1 walks, page size = 4K, vaddr size = 48 bits, paddr size = 40 bits.
+        let tcr_flags0 = TCR_EL1::EPD0::EnableTTBR0Walks
+            + TCR_EL1::TG0::KiB_4
+            + TCR_EL1::SH0::Inner
+            + TCR_EL1::ORGN0::WriteBack_ReadAlloc_WriteAlloc_Cacheable
+            + TCR_EL1::IRGN0::WriteBack_ReadAlloc_WriteAlloc_Cacheable
+            + TCR_EL1::T0SZ.val(16);
+        // let tcr_flags1 = TCR_EL1::EPD1::EnableTTBR1Walks
+        //     + TCR_EL1::TG1::KiB_4
+        //     + TCR_EL1::SH1::Inner
+        //     + TCR_EL1::ORGN1::WriteBack_ReadAlloc_WriteAlloc_Cacheable
+        //     + TCR_EL1::IRGN1::WriteBack_ReadAlloc_WriteAlloc_Cacheable
+        //     + TCR_EL1::T1SZ.val(16);
+        TCR_EL1.write(TCR_EL1::IPS::Bits_48 + tcr_flags0);
+        barrier::isb(barrier::SY);
+
+        TTBR0_EL1.set_baddr(root as u64);
+        instructions::flush_tlb_all();
+
+        SCTLR_EL1.write(SCTLR_EL1::M::Enable + SCTLR_EL1::C::Cacheable + SCTLR_EL1::I::Cacheable);
+    }
+
+    pub fn set_stack_pointer(&mut self, sp: usize) {
+        self.guest_sp = sp as u64;
+    }
+
+    fn setup(&self, npt_root: HostPhysAddr) -> RvmResult {
+        let attr0 = MAIR_EL2::Attr0_Device::nonGathering_nonReordering_EarlyWriteAck;
+        // Normal memory
+        let attr1 = MAIR_EL2::Attr1_Normal_Inner::WriteBack_NonTransient_ReadWriteAlloc
+            + MAIR_EL2::Attr1_Normal_Outer::WriteBack_NonTransient_ReadWriteAlloc;
+        MAIR_EL2.write(attr0 + attr1); // 0xff_04
+
+        let vtcr_flags = VTCR_EL2::TG0::Granule4KB 
+            + VTCR_EL2::SH0::Inner
+            + VTCR_EL2::ORGN0::NormalWBRAWA
+            + VTCR_EL2::IRGN0::NormalWBRAWA
+            + VTCR_EL2::T0SZ.val(16);
+        VTCR_EL2.write(VTCR_EL2::PS::PA_48B_256TB + vtcr_flags);
+        barrier::isb(barrier::SY);
+        
+        VTTBR_EL2.set_baddr(npt_root as _);
+        instructions::flush_tlb_all();
+        
+        HCR_EL2.write(HCR_EL2::VM::Enable + HCR_EL2::RW::EL1IsAarch64 + HCR_EL2::AMO::SET + HCR_EL2::FMO::SET);
+        SCTLR_EL2.write(SCTLR_EL2::C::Cacheable + SCTLR_EL2::I::Cacheable);
+        instructions::flush_tlb_all();
+        debug!("npt root: {:x}", npt_root);
         Ok(())
     }
 

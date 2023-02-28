@@ -54,7 +54,7 @@ pub(super) fn init() {
         fn ekernel();
     }
 
-    let mem_pool_start = align_up(virt_to_phys(ekernel as usize));
+    let mem_pool_start = align_up(ekernel as usize);
     let mem_pool_end = align_down(PHYS_MEMORY_END);
     let mem_pool_size = mem_pool_end - mem_pool_start;
     println!(

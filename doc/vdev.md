@@ -1,0 +1,5 @@
+1) 对于Passthrough的外设，hypervisor会将对应的外设地址map到IPA空间，这样VM中的software就可以与外设直接交互。
+
+2) 对于虚拟外设，hypervisor会将对应的stage2 table entries标记为Fault.VM中软件以为它在直接与外设交互，但实际上每次交互都会触发一次stage2 fault，并伴随着hypervisor在异常处理函数中模拟外设进行交互。
+
+3) 通常处理stag1 fault时，我们可以从寄存器FAR_ELx中获取触发异常的va。但是对于hypervisor来说，获取vm中的va并没有太大的意义。因此对于stag2 fault，arm提供了HPFAR_EL2来提供触发异常的IPA，异常相关的信息存放在寄存器ESR_EL2中

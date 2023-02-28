@@ -1,6 +1,7 @@
-use aarch64_cpu::registers::ESR_EL2;
+use aarch64_cpu::registers::{ESR_EL2, VTTBR_EL2};
 use rvm::{RvmResult, RvmVcpu};
 use rvm::arch::{ArmExitInfo, ArmExitReason};
+use tock_registers::interfaces::Readable;
 
 use super::hal::RvmHalImpl;
 
@@ -18,6 +19,14 @@ fn handle_hypercall(vcpu: &mut Vcpu) -> RvmResult {
     Ok(())
 }
 
+fn handle_iabt(vcpu: &mut Vcpu) -> RvmResult {
+    // todo!();
+    let regs = vcpu.regs();
+    // info!("VTTBR_EL2: {:x}", VTTBR_EL2.get());
+    // vcpu.advance_rip()?;
+    Ok(())
+}
+
 #[no_mangle]
 pub fn vmexit_handler(vcpu: &mut Vcpu) -> RvmResult {
     let exit_info = vcpu.exit_info()?;
@@ -25,6 +34,7 @@ pub fn vmexit_handler(vcpu: &mut Vcpu) -> RvmResult {
 
     let res = match exit_info.exit_reason {
         Some(ESR_EL2::EC::Value::HVC64) => handle_hypercall(vcpu),
+        // Some(ESR_EL2::EC::Value::InstrAbortLowerEL) => handle_iabt(vcpu),
         _ => panic!(
             "Unhandled VM-Exit reason {:?}:\n{:#x?}",
             exit_info.exit_reason.unwrap() as u64, vcpu

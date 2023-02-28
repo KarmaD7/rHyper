@@ -2,6 +2,9 @@
 pub mod regs;
 
 mod vcpu;
+mod ept;
+mod page_table;
+mod instructions;
 
 use core::marker::PhantomData;
 
@@ -10,6 +13,8 @@ use aarch64_cpu::registers::*;
 pub use vcpu::ArmVcpu as RvmVcpu;
 pub use vcpu::{ArmExitInfo, ArmExitReason};
 pub use self::ArmPerCpuState as ArchPerCpuState;
+pub use self::ept::ExtendedPageTable as NestedPageTable;
+pub use self::page_table::{Stage1PTE, PageTable};
 
 pub fn has_hardware_support() -> bool {
   true

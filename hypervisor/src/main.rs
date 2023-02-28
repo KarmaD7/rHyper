@@ -6,6 +6,7 @@
 #[macro_use]
 extern crate log;
 
+extern crate alloc;
 #[macro_use]
 mod logging;
 

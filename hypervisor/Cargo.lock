@@ -57,6 +57,7 @@ name = "hypervisor"
 version = "0.1.0"
 dependencies = [
  "aarch64-cpu",
+ "bitflags",
  "bitmap-allocator",
  "buddy_system_allocator",
  "cfg-if",

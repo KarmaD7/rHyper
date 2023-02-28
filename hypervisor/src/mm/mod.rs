@@ -12,5 +12,5 @@ pub fn init_heap_early() {
 }
 
 pub fn init() {
-  
+  frame::init();
 }
