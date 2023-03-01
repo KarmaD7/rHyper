@@ -2,6 +2,8 @@ ARCH ?= aarch64
 MODE ?= release
 LOG ?= warn
 
+GUEST_IMG ?= ../bin/nimbos.bin
+
 qemu := qemu-system-$(ARCH)
 qemu_args := -nographic -m 128M
 
@@ -36,6 +38,8 @@ ifeq ($(ARCH), aarch64)
 		-machine type=virt,secure=on,virtualization=on \
 		-kernel $(target_bin)
 endif
+
+qemu_args += -device loader,addr=0x4001000,file=$(GUEST_IMG),force-raw=on
 
 build: $(target_bin)
 

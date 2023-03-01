@@ -85,6 +85,8 @@ impl<H: RvmHal> ArmVcpu<H> {
 
         TTBR0_EL1.set_baddr(root as u64);
         instructions::flush_tlb_all();
+        
+        SCTLR_EL1.write(SCTLR_EL1::M::Enable + SCTLR_EL1::C::Cacheable + SCTLR_EL1::I::Cacheable);
     }
 
     pub fn set_stack_pointer(&mut self, sp: usize) {
@@ -104,8 +106,6 @@ impl<H: RvmHal> ArmVcpu<H> {
         VTTBR_EL2.set_baddr(npt_root as _);
         instructions::flush_tlb_all();
 
-        SCTLR_EL1.write(SCTLR_EL1::M::Enable + SCTLR_EL1::C::Cacheable + SCTLR_EL1::I::Cacheable);
-        instructions::flush_tlb_all();
         Ok(())
     }
 

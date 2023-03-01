@@ -17,3 +17,4 @@ rvm/Cargo.lock
 .DS_Store
 *.asm
 *.ref
+bin/
