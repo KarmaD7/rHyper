@@ -1,7 +1,6 @@
 mod boot;
 
-pub mod timer;
 pub mod instructions;
+pub mod timer;
 
-pub fn init() {
-}
+pub fn init() {}

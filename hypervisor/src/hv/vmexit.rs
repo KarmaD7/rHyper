@@ -1,6 +1,6 @@
 use aarch64_cpu::registers::{ESR_EL2, VTTBR_EL2};
-use rvm::{RvmResult, RvmVcpu};
 use rvm::arch::{ArmExitInfo, ArmExitReason};
+use rvm::{RvmResult, RvmVcpu};
 use tock_registers::interfaces::Readable;
 
 use super::hal::RvmHalImpl;
@@ -37,14 +37,16 @@ pub fn vmexit_handler(vcpu: &mut Vcpu) -> RvmResult {
         // Some(ESR_EL2::EC::Value::InstrAbortLowerEL) => handle_iabt(vcpu),
         _ => panic!(
             "Unhandled VM-Exit reason {:?}:\n{:#x?}",
-            exit_info.exit_reason.unwrap() as u64, vcpu
+            exit_info.exit_reason.unwrap() as u64,
+            vcpu
         ),
     };
 
     if res.is_err() {
         panic!(
             "Failed to handle VM-exit {:?}:\n{:#x?}",
-            exit_info.exit_reason.unwrap() as u64, vcpu
+            exit_info.exit_reason.unwrap() as u64,
+            vcpu
         );
     }
 

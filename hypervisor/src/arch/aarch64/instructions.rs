@@ -1,6 +1,6 @@
+use aarch64_cpu::registers::*;
 #[allow(dead_code)]
 use core::arch::asm;
-use aarch64_cpu::registers::*;
 use tock_registers::interfaces::*;
 
 #[inline]
@@ -59,5 +59,5 @@ pub fn flush_icache_all() {
 
 #[inline]
 pub fn wait_for_ints() {
-  aarch64_cpu::asm::wfi();
+    aarch64_cpu::asm::wfi();
 }

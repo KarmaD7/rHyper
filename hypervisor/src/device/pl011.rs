@@ -39,7 +39,7 @@ impl Pl011Uart {
     }
 
     const fn regs(&self) -> &Pl011UartRegs {
-        unsafe { &*(self.base_vaddr as *const _)}
+        unsafe { &*(self.base_vaddr as *const _) }
     }
 
     fn init(&mut self) {

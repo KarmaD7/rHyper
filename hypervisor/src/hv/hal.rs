@@ -1,4 +1,4 @@
-use rvm::{RvmHal, HostPhysAddr, HostVirtAddr, RvmVcpu};
+use rvm::{HostPhysAddr, HostVirtAddr, RvmHal, RvmVcpu};
 
 use crate::mm::{address, frame};
 

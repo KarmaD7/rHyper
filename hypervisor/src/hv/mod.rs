@@ -3,13 +3,13 @@ mod gpm;
 mod hal;
 mod vmexit;
 
-use rvm::{GuestPhysAddr, HostVirtAddr, MemFlags, RvmPerCpu, RvmResult, GenericPTE, HostPhysAddr};
+use rvm::{GenericPTE, GuestPhysAddr, HostPhysAddr, HostVirtAddr, MemFlags, RvmPerCpu, RvmResult};
 
 use self::gconfig::*;
 use self::gpm::{GuestMemoryRegion, GuestPhysMemorySet};
 use self::hal::RvmHalImpl;
 use crate::arch::instructions;
-use crate::mm::address::{virt_to_phys, phys_to_virt};
+use crate::mm::address::{phys_to_virt, virt_to_phys};
 
 #[repr(align(4096))]
 struct AlignedMemory<const LEN: usize>([u8; LEN]);
@@ -110,11 +110,11 @@ fn setup_gpm() -> RvmResult<GuestPhysMemorySet> {
 pub fn run() -> ! {
     println!("Starting virtualization...");
     println!("Hardware support: {:?}", rvm::has_hardware_support());
-    
+
     let mut percpu = RvmPerCpu::<RvmHalImpl>::new(0);
     percpu.hardware_enable().unwrap();
     debug!("Vcpu Created.");
-    
+
     let gpm = setup_gpm().unwrap();
     // info!("{:#x?}", gpm);
     debug!("Setup GPM.");
