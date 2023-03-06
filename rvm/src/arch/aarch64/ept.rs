@@ -1,10 +1,6 @@
-use core::{convert::TryFrom, fmt};
-
-
-use bit_field::BitField;
+use core::fmt;
 
 use crate::mm::{GenericPTE, HostPhysAddr, Level4PageTable, MemFlags, PAGE_SIZE};
-
 
 bitflags::bitflags! {
     /// Memory attribute fields in the VMSAv8-64 translation table format descriptors.
@@ -143,7 +139,14 @@ impl GenericPTE for PageTableEntry {
         Self(attr.bits() | (paddr & Self::PHYS_ADDR_MASK) as u64)
     }
     fn new_table(paddr: HostPhysAddr) -> Self {
-        let attr = DescriptorAttr::NON_BLOCK | DescriptorAttr::VALID | DescriptorAttr::ATTR_INDX | DescriptorAttr::S2AP_R | DescriptorAttr::S2AP_W | DescriptorAttr::AF | DescriptorAttr::SHAREABLE | DescriptorAttr::INNER;
+        let attr = DescriptorAttr::NON_BLOCK
+            | DescriptorAttr::VALID
+            | DescriptorAttr::ATTR_INDX
+            | DescriptorAttr::S2AP_R
+            | DescriptorAttr::S2AP_W
+            | DescriptorAttr::AF
+            | DescriptorAttr::SHAREABLE
+            | DescriptorAttr::INNER;
         Self(attr.bits() | (paddr & Self::PHYS_ADDR_MASK) as u64)
     }
     fn paddr(&self) -> HostPhysAddr {

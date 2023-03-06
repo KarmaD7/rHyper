@@ -93,4 +93,3 @@ impl<H: RvmHal> Drop for PhysFrame<H> {
         }
     }
 }
-

@@ -154,8 +154,6 @@ impl<H: RvmHal, PTE: GenericPTE> Level4PageTable<H, PTE> {
             },
         );
     }
-
-    
 }
 
 impl<H: RvmHal, PTE: GenericPTE> Level4PageTable<H, PTE> {

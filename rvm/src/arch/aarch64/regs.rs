@@ -58,4 +58,3 @@ macro_rules! restore_regs_from_stack {
         add     sp, sp, 34 * 8"
     };
 }
-

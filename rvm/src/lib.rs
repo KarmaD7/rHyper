@@ -16,11 +16,11 @@ pub mod arch;
 
 use arch::ArchPerCpuState;
 
-pub use arch::{NestedPageTable, PageTable, Stage1PTE, RvmVcpu};
+pub use arch::{NestedPageTable, PageTable, RvmVcpu, Stage1PTE};
 pub use error::{RvmError, RvmResult};
 pub use hal::RvmHal;
+pub use mm::{GenericPTE, Level4PageTable, MemFlags, NestedPageFaultInfo};
 pub use mm::{GuestPhysAddr, GuestVirtAddr, HostPhysAddr, HostVirtAddr};
-pub use mm::{Level4PageTable, MemFlags, NestedPageFaultInfo, GenericPTE};
 
 /// Whether the hardware has virtualization support.
 pub fn has_hardware_support() -> bool {

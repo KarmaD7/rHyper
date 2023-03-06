@@ -1,11 +1,16 @@
-use core::{marker::PhantomData, arch::{asm, global_asm}, mem::size_of};
+#![allow(dead_code)]
+use core::{
+    arch::asm,
+    marker::PhantomData,
+    mem::size_of,
+};
 
-use aarch64_cpu::registers::*;
 use aarch64_cpu::asm::barrier;
-use aarch64_cpu::registers::ESR_EL2::EC::Value as Value;
-use tock_registers::{interfaces::{Readable, Writeable, ReadWriteable}};
+use aarch64_cpu::registers::ESR_EL2::EC::Value;
+use aarch64_cpu::registers::*;
+use tock_registers::interfaces::{ReadWriteable, Readable, Writeable};
 
-use crate::{GuestPhysAddr, RvmHal, RvmResult, HostPhysAddr, arch::aarch64::instructions};
+use crate::{arch::aarch64::instructions, GuestPhysAddr, HostPhysAddr, RvmHal, RvmResult};
 
 use super::{regs::GeneralRegisters, ArchPerCpuState};
 
@@ -21,17 +26,22 @@ pub struct ArmVcpu<H: RvmHal> {
 }
 
 impl<H: RvmHal> ArmVcpu<H> {
-    pub(crate) fn new(_percpu: &ArchPerCpuState<H>, entry: GuestPhysAddr, npt_root: HostPhysAddr) -> RvmResult<Self> {
-        let mut vcpu = Self {
+    pub(crate) fn new(
+        _percpu: &ArchPerCpuState<H>,
+        entry: GuestPhysAddr,
+        npt_root: HostPhysAddr,
+    ) -> RvmResult<Self> {
+        let vcpu = Self {
             host_stack_top: 0,
             guest_regs: GeneralRegisters::default(),
-            guest_sp: 0, // todo
+            guest_sp: 0,
             elr: entry as u64,
             spsr: (SPSR_EL2::M::EL1h
-            + SPSR_EL2::D::Masked
-            + SPSR_EL2::A::Masked
-            + SPSR_EL2::I::Masked
-            + SPSR_EL2::F::Masked).into(),
+                + SPSR_EL2::D::Masked
+                + SPSR_EL2::A::Masked
+                + SPSR_EL2::I::Masked
+                + SPSR_EL2::F::Masked)
+                .into(),
             _phantom_data: PhantomData,
         };
         info!("npt root is {:x}.", npt_root);
@@ -68,7 +78,7 @@ impl<H: RvmHal> ArmVcpu<H> {
     pub fn set_page_table_root(&self, root: usize) {
         info!("TTBR0 set baddr {}", root);
         let attr0 = MAIR_EL1::Attr0_Device::nonGathering_nonReordering_EarlyWriteAck;
-     // Normal memory
+        // Normal memory
         let attr1 = MAIR_EL1::Attr1_Normal_Inner::WriteBack_NonTransient_ReadWriteAlloc
             + MAIR_EL1::Attr1_Normal_Outer::WriteBack_NonTransient_ReadWriteAlloc;
         MAIR_EL1.write(attr0 + attr1); // 0xff_04
@@ -85,7 +95,7 @@ impl<H: RvmHal> ArmVcpu<H> {
 
         TTBR0_EL1.set_baddr(root as u64);
         instructions::flush_tlb_all();
-        
+
         SCTLR_EL1.write(SCTLR_EL1::M::Enable + SCTLR_EL1::C::Cacheable + SCTLR_EL1::I::Cacheable);
     }
 
@@ -98,15 +108,10 @@ impl<H: RvmHal> ArmVcpu<H> {
         CNTHCTL_EL2.modify(CNTHCTL_EL2::EL1PCEN::SET + CNTHCTL_EL2::EL1PCTEN::SET);
         CNTVOFF_EL2.set(0);
         HCR_EL2.write(
-                HCR_EL2::VM::Enable
-                + HCR_EL2::RW::EL1IsAarch64
-                + HCR_EL2::AMO::SET
-                + HCR_EL2::FMO::SET,
+            HCR_EL2::VM::Enable + HCR_EL2::RW::EL1IsAarch64 + HCR_EL2::AMO::SET + HCR_EL2::FMO::SET,
         );
 
-
-
-        let vtcr_flags = VTCR_EL2::TG0::Granule4KB 
+        let vtcr_flags = VTCR_EL2::TG0::Granule4KB
             + VTCR_EL2::SH0::Inner
             + VTCR_EL2::SL0.val(2)
             + VTCR_EL2::ORGN0::NormalWBRAWA
@@ -114,7 +119,7 @@ impl<H: RvmHal> ArmVcpu<H> {
             + VTCR_EL2::T0SZ.val(20);
         VTCR_EL2.write(VTCR_EL2::PS::PA_44B_16TB + vtcr_flags);
         barrier::isb(barrier::SY);
-        
+
         VTTBR_EL2.set_baddr(npt_root as _);
         instructions::flush_tlb_all();
 
