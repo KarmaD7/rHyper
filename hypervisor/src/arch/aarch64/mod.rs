@@ -1,6 +1,8 @@
-mod boot;
+mod trap;
 
 pub mod instructions;
 pub mod timer;
 
-pub fn init() {}
+pub fn init() {
+    trap::init();
+}

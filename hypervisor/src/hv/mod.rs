@@ -3,7 +3,7 @@ mod gpm;
 mod hal;
 mod vmexit;
 
-use rvm::{GenericPTE, GuestPhysAddr, HostPhysAddr, HostVirtAddr, MemFlags, RvmPerCpu, RvmResult};
+use rvm::{GuestPhysAddr, HostPhysAddr, HostVirtAddr, MemFlags, RvmPerCpu, RvmResult};
 
 use self::gconfig::*;
 use self::gpm::{GuestMemoryRegion, GuestPhysMemorySet};
@@ -20,12 +20,12 @@ static mut GUEST_PHYS_MEMORY: AlignedMemory<GUEST_PHYS_MEMORY_SIZE> =
 fn gpa_as_mut_ptr(guest_paddr: GuestPhysAddr) -> *mut u8 {
     let offset = unsafe { &GUEST_PHYS_MEMORY as *const _ as usize };
     let host_vaddr = guest_paddr - GUEST_PHYS_MEMORY_BASE + offset;
-    info!("Host vaddr is {:x}.", host_vaddr);
+    debug!("Host vaddr is {:x}.", host_vaddr);
     host_vaddr as *mut u8
 }
 
 fn load_guest_image(hpa: HostPhysAddr, load_gpa: GuestPhysAddr, size: usize) {
-    info!("loading guest image");
+    debug!("loading guest image");
     let image_ptr = phys_to_virt(hpa) as *const u8;
     let image = unsafe { core::slice::from_raw_parts(image_ptr, size) };
     unsafe {
@@ -81,7 +81,7 @@ fn setup_gpm() -> RvmResult<GuestPhysMemorySet> {
         GuestMemoryRegion {
             // RAM
             gpa: GUEST_PHYS_MEMORY_BASE,
-            hpa: gpa_as_mut_ptr(GUEST_PHYS_MEMORY_BASE) as HostVirtAddr,
+            hpa: virt_to_phys(gpa_as_mut_ptr(GUEST_PHYS_MEMORY_BASE) as HostVirtAddr),
             size: GUEST_PHYS_MEMORY_SIZE,
             flags: MemFlags::READ | MemFlags::WRITE | MemFlags::EXECUTE,
         },

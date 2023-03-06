@@ -3,7 +3,7 @@ use core::{marker::PhantomData, arch::{asm, global_asm}, mem::size_of};
 use aarch64_cpu::registers::*;
 use aarch64_cpu::asm::barrier;
 use aarch64_cpu::registers::ESR_EL2::EC::Value as Value;
-use tock_registers::{interfaces::{Readable, Writeable}};
+use tock_registers::{interfaces::{Readable, Writeable, ReadWriteable}};
 
 use crate::{GuestPhysAddr, RvmHal, RvmResult, HostPhysAddr, arch::aarch64::instructions};
 
@@ -94,6 +94,18 @@ impl<H: RvmHal> ArmVcpu<H> {
     }
 
     fn setup(&self, npt_root: HostPhysAddr) -> RvmResult {
+        // Disable EL1 timer traps and the timer offset.
+        CNTHCTL_EL2.modify(CNTHCTL_EL2::EL1PCEN::SET + CNTHCTL_EL2::EL1PCTEN::SET);
+        CNTVOFF_EL2.set(0);
+        HCR_EL2.write(
+                HCR_EL2::VM::Enable
+                + HCR_EL2::RW::EL1IsAarch64
+                + HCR_EL2::AMO::SET
+                + HCR_EL2::FMO::SET,
+        );
+
+
+
         let vtcr_flags = VTCR_EL2::TG0::Granule4KB 
             + VTCR_EL2::SH0::Inner
             + VTCR_EL2::SL0.val(2)

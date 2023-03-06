@@ -1,5 +1,4 @@
 use super::PAGE_SIZE;
-use crate::config::PHYS_VIRT_OFFSET;
 
 pub type PhysAddr = usize;
 pub type VirtAddr = usize;

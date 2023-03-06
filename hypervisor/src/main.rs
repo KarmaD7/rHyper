@@ -15,6 +15,7 @@ mod config;
 mod device;
 mod hv;
 mod mm;
+mod platform;
 mod timer;
 
 #[cfg(not(test))]
