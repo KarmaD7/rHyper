@@ -48,3 +48,9 @@ pub fn vmexit_handler(vcpu: &mut Vcpu) -> RvmResult {
 
     Ok(())
 }
+
+#[no_mangle]
+pub fn irq_handler(vcpu: &mut Vcpu) -> RvmResult {
+    
+    todo!()
+}
