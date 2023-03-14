@@ -2,6 +2,7 @@
 
 #![allow(dead_code)]
 
+use spin::Mutex;
 use tock_registers::interfaces::{Readable, Writeable};
 use tock_registers::register_structs;
 use tock_registers::registers::{ReadOnly, ReadWrite, WriteOnly};
@@ -13,15 +14,21 @@ use crate::mm::{PhysAddr, VirtAddr};
 const GIC_BASE: usize = 0x0800_0000;
 const GICD_BASE: PhysAddr = GIC_BASE;
 const GICC_BASE: PhysAddr = GIC_BASE + 0x10000;
-const GICH_BASE: PhysAddr = GIC_BASE + 0x20000; // TODO
-const GICV_BASE: PhysAddr = GIC_BASE + 0x30000; // TODO
+const GICH_BASE: PhysAddr = GIC_BASE + 0x30000;
+const GICV_BASE: PhysAddr = GIC_BASE + 0x40000;
 
 const PPI_BASE: usize = 16;
 const SPI_BASE: usize = 32;
 
 const IRQ_COUNT: usize = 1024;
 
-static GIC: Gic = Gic::new(GICD_BASE, GICC_BASE, GICH_BASE, GICV_BASE);
+// mask
+const LR_VIRTIRQ_MASK: usize = 0x3ff;
+const LR_PHYSIRQ_MASK: usize = 0x3ff << 10;
+
+const LR_HW_BIT: u32 = 1 << 28;
+
+static GIC: Mutex<Gic> = Mutex::new(Gic::new(GICD_BASE, GICC_BASE, GICH_BASE, GICV_BASE));
 // static HANDLERS: IrqHandlerTable<IRQ_COUNT> = IrqHandlerTable::new();
 
 register_structs! {
@@ -57,7 +64,7 @@ register_structs! {
         (0x0d00 => _reserved_1),
         /// Software Generated Interrupt Register.
         (0x0f00 => SGIR: WriteOnly<u32>),
-        (0x1000 => @END),
+        (0x0f04 => @END),
     }
 }
 
@@ -84,7 +91,7 @@ register_structs! {
         (0x0100 => _reserved_2),
         /// Deactivate Interrupt Register.
         (0x1000 => DIR: WriteOnly<u32>),
-        (0x2000 => @END),
+        (0x1004 => @END),
     }
 }
 
@@ -100,16 +107,21 @@ register_structs! {
         (0x000c => _reserved_0),
         // Maintenance Interrupt Status Register.
         (0x0010 => MISR: ReadOnly<u32>),
+        (0x0014 => _reserved_1),
         // End of Interrupt Status Registers 0 and 1.
         (0x0020 => EISR0: ReadOnly<u32>),
         (0x0024 => EISR1: ReadOnly<u32>),
+        (0x0028 => _reserved_2),
         // Empty List Register Status Registers 0 and 1.
         (0x0030 => ELSR0: ReadOnly<u32>),
         (0x0034 => ELSR1: ReadOnly<u32>),
+        (0x0038 => _reserved_3),
         // Active Priorities Register.
         (0x00f0 => APR: ReadWrite<u32>),
+        (0x00f4 => _reserved_4),
         // List Registers 0-63.
-        (0x0100 => @END),
+        (0x0100 => LR: [ReadWrite<u32>; 0x40]),
+        (0x0200 => @END),
     }
 }
 
@@ -136,7 +148,7 @@ register_structs! {
         (0x0100 => _reserved_2),
         /// Deactivate Interrupt Register.
         (0x1000 => DIR: WriteOnly<u32>),
-        (0x2000 => @END),
+        (0x1004 => @END),
     } 
 }
 
@@ -159,16 +171,14 @@ struct Gic {
 }
 
 impl Gic {
-    fn new(gicd_base: VirtAddr, gicc_base: VirtAddr, gich_base: VirtAddr, gicv_base: VirtAddr) -> Self {
-        let mut gic = Self {
+    const fn new(gicd_base: VirtAddr, gicc_base: VirtAddr, gich_base: VirtAddr, gicv_base: VirtAddr) -> Self {
+        Self {
             gicd_base,
             gicc_base,
             gich_base,
             gicv_base,
             max_irqs: 0,
-        };
-        gic.max_irqs = ((gic.gicd().TYPER.get() as usize & 0b11111) + 1) * 32;
-        gic
+        }
     }
 
     const fn gicd(&self) -> &GicDistributorRegs {
@@ -221,6 +231,18 @@ impl Gic {
         }
     }
 
+    fn lr_num(&self) -> usize {
+        (self.gich().VTR.get() as usize & 0b11111) + 1
+    }
+
+    fn read_lr(&self, id: usize) -> u32 {
+        self.gich().LR[id].get()
+    }
+
+    fn write_lr(&self, id: usize, val: u32) {
+        self.gich().LR[id].set(val)
+    }
+
     fn pending_irq(&self) -> Option<usize> {
         let iar = self.gicc().IAR.get();
         if iar >= 0x3fe {
@@ -231,8 +253,44 @@ impl Gic {
         }
     }
 
-    fn inject_virq(&self) {
-        
+    // just translate from jailhouse, not rust-like
+    // error to be handled
+    fn inject_irq(&self, irq_id: usize) {
+        debug!("To Inject IRQ {}", irq_id);
+        let elsr: u64 = (self.gich().ELSR1.get() as u64) << 32 | self.gich().ELSR0.get() as u64;
+        let lr_num = self.lr_num();
+        let mut lr_idx = -1 as isize;
+        for i in 0..lr_num {
+            if (1 << i) & elsr > 0 {
+                if lr_idx == -1 {
+                    lr_idx = i as isize;
+                }
+                continue;
+            }
+
+            // overlap
+            let lr_val = self.read_lr(i) as usize;
+            if (i & LR_VIRTIRQ_MASK) == irq_id {
+                return;
+            }
+        }
+
+        if lr_idx == -1 {
+            return;
+        } else {
+            let mut val = 0;
+
+            val = irq_id as u32;
+
+            if false /* sgi */ {
+                todo!()
+            } else {
+                val |= (irq_id & LR_PHYSIRQ_MASK) as u32;
+                val |= LR_HW_BIT;
+            }
+
+            self.write_lr(lr_idx as usize, val);
+        }
     }
 
     fn eoi(&self, vector: usize) {
@@ -241,10 +299,14 @@ impl Gic {
 
     
 
-    fn init(&self) {
+    fn init(&mut self) {
+        self.max_irqs = ((self.gicd().TYPER.get() as usize & 0b11111) + 1) * 32;
+
         let gicd = self.gicd();
         let gicc = self.gicc();
-
+        let gich = self.gich();
+        let gicv = self.gicv();
+        
         for i in (0..self.max_irqs).step_by(32) {
             gicd.ICENABLER[i / 32].set(u32::MAX);
             gicd.ICPENDR[i / 32].set(u32::MAX);
@@ -263,17 +325,22 @@ impl Gic {
         // enable GIC
         gicd.CTLR.set(1);
         gicc.CTLR.set(1);
+        gich.HCR.set(1);
+        gicv.CTLR.set(1);
         // unmask interrupts at all priority levels
         gicc.PMR.set(0xff);
+        // gicv.
+
+
     }
 }
 
 pub fn set_enable(vector: usize, enable: bool) {
-    GIC.set_enable(vector, enable);
+    GIC.lock().set_enable(vector, enable);
 }
 
 pub fn handle_irq(_vector: usize) {
-    if let Some(vector) = GIC.pending_irq() {
+    if let Some(vector) = GIC.lock().pending_irq() {
         // HANDLERS.handle(vector);
         // GIC.eoi(vector);
     }
@@ -284,7 +351,7 @@ pub fn handle_irq(_vector: usize) {
 // }
 
 pub fn init() {
-    GIC.init();
+    GIC.lock().init();
     // let gic = Gic::new(GICD_BASE.into_kvaddr(), GICC_BASE.into_kvaddr());
     // gic.init();
     // GIC.init_by(gic);
