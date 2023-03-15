@@ -26,7 +26,8 @@ const IRQ_COUNT: usize = 1024;
 const LR_VIRTIRQ_MASK: usize = 0x3ff;
 const LR_PHYSIRQ_MASK: usize = 0x3ff << 10;
 
-const LR_HW_BIT: u32 = 1 << 28;
+const LR_PENDING_BIT: u32 = 1 << 28;
+const LR_HW_BIT: u32 = 1 << 31;
 
 static GIC: Mutex<Gic> = Mutex::new(Gic::new(GICD_BASE, GICC_BASE, GICH_BASE, GICV_BASE));
 // static HANDLERS: IrqHandlerTable<IRQ_COUNT> = IrqHandlerTable::new();
@@ -282,6 +283,7 @@ impl Gic {
 
             val = irq_id as u32;
 
+
             if false /* sgi */ {
                 todo!()
             } else {
@@ -329,7 +331,7 @@ impl Gic {
         gicv.CTLR.set(1);
         // unmask interrupts at all priority levels
         gicc.PMR.set(0xff);
-        // gicv.
+        // gicv.PMR
 
 
     }

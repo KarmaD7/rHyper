@@ -23,6 +23,10 @@ fn handle_iabt(vcpu: &mut Vcpu) -> RvmResult {
     Ok(())
 }
 
+fn handle_dabt(vcpu: &mut Vcpu) -> RvmResult {
+    todo!()
+}
+
 #[no_mangle]
 pub fn vmexit_handler(vcpu: &mut Vcpu) -> RvmResult {
     let exit_info = vcpu.exit_info()?;
@@ -51,6 +55,6 @@ pub fn vmexit_handler(vcpu: &mut Vcpu) -> RvmResult {
 
 #[no_mangle]
 pub fn irq_handler(vcpu: &mut Vcpu) -> RvmResult {
-    
+    // let irq_number =     
     todo!()
 }

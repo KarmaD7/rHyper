@@ -18,6 +18,8 @@ mod mm;
 mod platform;
 mod timer;
 
+mod utils;
+
 #[cfg(not(test))]
 mod lang_items;
 
