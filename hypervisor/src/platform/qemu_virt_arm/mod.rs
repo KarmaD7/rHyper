@@ -1,3 +1,5 @@
+mod psci;
+
 use aarch64_cpu::{asm, asm::barrier, registers::*};
 use rvm::{GenericPTE, MemFlags, Stage1PTE};
 use tock_registers::interfaces::{ReadWriteable, Readable, Writeable};

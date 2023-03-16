@@ -150,7 +150,7 @@ register_structs! {
         /// Deactivate Interrupt Register.
         (0x1000 => DIR: WriteOnly<u32>),
         (0x1004 => @END),
-    } 
+    }
 }
 
 enum TriggerMode {
@@ -172,7 +172,12 @@ struct Gic {
 }
 
 impl Gic {
-    const fn new(gicd_base: VirtAddr, gicc_base: VirtAddr, gich_base: VirtAddr, gicv_base: VirtAddr) -> Self {
+    const fn new(
+        gicd_base: VirtAddr,
+        gicc_base: VirtAddr,
+        gich_base: VirtAddr,
+        gicv_base: VirtAddr,
+    ) -> Self {
         Self {
             gicd_base,
             gicc_base,
@@ -191,11 +196,11 @@ impl Gic {
     }
 
     const fn gich(&self) -> &GicHypervisorRegs {
-        unsafe { &*{self.gich_base as *const _} }
+        unsafe { &*{ self.gich_base as *const _ } }
     }
 
     const fn gicv(&self) -> &GicVcpuInterfaceRegs {
-        unsafe { &*{self.gicv_base as *const _} }
+        unsafe { &*{ self.gicv_base as *const _ } }
     }
 
     fn cpu_num(&self) -> usize {
@@ -283,8 +288,9 @@ impl Gic {
 
             val = irq_id as u32;
 
-
-            if false /* sgi */ {
+            if false
+            /* sgi */
+            {
                 todo!()
             } else {
                 val |= (irq_id & LR_PHYSIRQ_MASK) as u32;
@@ -299,8 +305,6 @@ impl Gic {
         self.gicc().EOIR.set(vector as _);
     }
 
-    
-
     fn init(&mut self) {
         self.max_irqs = ((self.gicd().TYPER.get() as usize & 0b11111) + 1) * 32;
 
@@ -308,7 +312,7 @@ impl Gic {
         let gicc = self.gicc();
         let gich = self.gich();
         let gicv = self.gicv();
-        
+
         for i in (0..self.max_irqs).step_by(32) {
             gicd.ICENABLER[i / 32].set(u32::MAX);
             gicd.ICPENDR[i / 32].set(u32::MAX);
@@ -332,8 +336,6 @@ impl Gic {
         // unmask interrupts at all priority levels
         gicc.PMR.set(0xff);
         // gicv.PMR
-
-
     }
 }
 

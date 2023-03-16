@@ -23,7 +23,8 @@ impl<T> LazyInit<T> {
     pub fn init_by(&self, data: T) {
         assert!(!self.is_init());
         unsafe { (*self.data.get()).as_mut_ptr().write(data) };
-        self.inited.store(true, core::sync::atomic::Ordering::Release)
+        self.inited
+            .store(true, core::sync::atomic::Ordering::Release)
     }
 
     pub fn is_init(&self) -> bool {
@@ -51,7 +52,7 @@ impl<T> LazyInit<T> {
         self.check_init();
         unsafe { &*(*self.data.get()).as_ptr() }
     }
-    
+
     fn get_mut(&mut self) -> &mut T {
         self.check_init();
         unsafe { &mut *(*self.data.get()).as_mut_ptr() }

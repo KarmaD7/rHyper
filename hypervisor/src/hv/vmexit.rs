@@ -55,6 +55,6 @@ pub fn vmexit_handler(vcpu: &mut Vcpu) -> RvmResult {
 
 #[no_mangle]
 pub fn irq_handler(vcpu: &mut Vcpu) -> RvmResult {
-    // let irq_number =     
+    // let irq_number =
     todo!()
 }
