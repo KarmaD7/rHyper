@@ -25,6 +25,11 @@ mod lang_items;
 
 use core::sync::atomic::{AtomicBool, Ordering};
 
+use arch::instructions::wait_for_ints;
+use device::console_putchar;
+
+use crate::platform::mp::start_secondary_cpus;
+
 static INIT_OK: AtomicBool = AtomicBool::new(false);
 
 const LOGO: &str = r"
@@ -57,10 +62,11 @@ pub fn init_ok() -> bool {
 }
 
 #[no_mangle]
-fn rust_main() {
+fn rust_main(cpu_id: usize) {
     clear_bss();
     device::init_early();
     println!("{}", LOGO);
+    println!("primary cpu id: {}.", cpu_id);
     println!(
         "\
         arch = {}\n\
@@ -79,6 +85,15 @@ fn rust_main() {
     mm::init();
     INIT_OK.store(true, Ordering::SeqCst);
     info!("Initialization completed.\n");
+    start_secondary_cpus(cpu_id);
     hv::run();
     // arch::instructions::wait_for_ints();
+}
+
+#[no_mangle]
+fn rust_main_secondary(cpu_id: usize) {
+    // todo
+    console_putchar('z' as u8);
+    // info!("CPU {} initialized.", cpu_id);
+    wait_for_ints();
 }

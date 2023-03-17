@@ -1,6 +1,7 @@
 ARCH ?= aarch64
 MODE ?= release
 LOG ?= warn
+SMP ?= 1
 
 GUEST_IMG ?= ../bin/nimbos.bin
 
@@ -35,8 +36,9 @@ qemu_args := -nographic -m 128M
 ifeq ($(ARCH), aarch64)
 	qemu_args += \
 		-cpu cortex-a72 \
-		-machine type=virt,secure=on,virtualization=on \
-		-kernel $(target_bin)
+		-machine type=virt,virtualization=on \
+		-kernel $(target_bin) \
+		-smp $(SMP)
 endif
 
 qemu_args += -device loader,addr=0x4001000,file=$(GUEST_IMG),force-raw=on

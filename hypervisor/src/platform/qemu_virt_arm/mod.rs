@@ -1,3 +1,4 @@
+pub mod mp;
 mod psci;
 
 use aarch64_cpu::{asm, asm::barrier, registers::*};
@@ -5,10 +6,12 @@ use rvm::{GenericPTE, MemFlags, Stage1PTE};
 use tock_registers::interfaces::{ReadWriteable, Readable, Writeable};
 
 use crate::arch::instructions;
-use crate::config::BOOT_KERNEL_STACK_SIZE;
+use crate::config::{BOOT_KERNEL_STACK_SIZE, CPU_NUM};
+
+// pub use psci::psci_start_cpu;
 
 #[link_section = ".bss.stack"]
-static mut BOOT_STACK: [u8; BOOT_KERNEL_STACK_SIZE] = [0; BOOT_KERNEL_STACK_SIZE];
+static mut BOOT_STACK: [u8; BOOT_KERNEL_STACK_SIZE * CPU_NUM] = [0; BOOT_KERNEL_STACK_SIZE * CPU_NUM];
 
 #[link_section = ".data.boot_page_table"]
 static mut BOOT_PT_L0: [Stage1PTE; 512] = [Stage1PTE::empty(); 512];
@@ -86,11 +89,15 @@ unsafe extern "C" fn _start() -> ! {
     core::arch::asm!("
         adrp    x8, boot_stack_top
         mov     sp, x8
+
         bl      {switch_to_el2}
         bl      {init_boot_page_table}
         bl      {init_mmu}
+
         ldr     x8, =boot_stack_top
         mov     sp, x8
+        mrs     x0, mpidr_el1
+        and     x0, x0, #0xffffff
         ldr     x8, ={rust_main}
         blr     x8
         b      .",
@@ -98,6 +105,39 @@ unsafe extern "C" fn _start() -> ! {
         init_boot_page_table = sym init_boot_page_table,
         init_mmu = sym init_mmu,
         rust_main = sym crate::rust_main,
+        options(noreturn),
+    )
+}
+
+#[naked]
+#[no_mangle]
+#[link_section = ".text.boot"]
+unsafe extern "C" fn _start_secondary() -> ! {
+    core::arch::asm!("
+        adrp    x8, boot_stack_top
+        mrs     x0, mpidr_el1
+        and     x0, x1, #0xffffff
+        mov     x10, {boot_stack_size}
+        mul     x10, x0, x10        
+        sub     x8, x8, x10
+        mov     sp, x8
+
+        bl      {switch_to_el2}
+        bl      {init_mmu}
+
+        ldr     x8, =boot_stack_top
+        sub     x8, x8, x10
+        mov     sp, x8
+
+        mrs     x0, mpidr_el1
+        and     x0, x0, #0xffffff
+        ldr     x8, ={rust_main_secondary}
+        blr     x8
+        b      .",
+        switch_to_el2 = sym switch_to_el2,
+        init_mmu = sym init_mmu,
+        rust_main_secondary = sym crate::rust_main_secondary,
+        boot_stack_size = const BOOT_KERNEL_STACK_SIZE,
         options(noreturn),
     )
 }
