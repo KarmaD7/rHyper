@@ -116,17 +116,18 @@ unsafe extern "C" fn _start_secondary() -> ! {
     core::arch::asm!("
         adrp    x8, boot_stack_top
         mrs     x0, mpidr_el1
-        and     x0, x1, #0xffffff
-        mov     x10, {boot_stack_size}
-        mul     x10, x0, x10        
-        sub     x8, x8, x10
+        and     x0, x0, #0xffffff
+        mov     x19, {boot_stack_size}
+        mul     x19, x0, x19        
+        sub     x8, x8, x19
         mov     sp, x8
 
         bl      {switch_to_el2}
+        bl      {init_boot_page_table}
         bl      {init_mmu}
 
         ldr     x8, =boot_stack_top
-        sub     x8, x8, x10
+        sub     x8, x8, x19
         mov     sp, x8
 
         mrs     x0, mpidr_el1
@@ -135,6 +136,7 @@ unsafe extern "C" fn _start_secondary() -> ! {
         blr     x8
         b      .",
         switch_to_el2 = sym switch_to_el2,
+        init_boot_page_table = sym init_boot_page_table,
         init_mmu = sym init_mmu,
         rust_main_secondary = sym crate::rust_main_secondary,
         boot_stack_size = const BOOT_KERNEL_STACK_SIZE,

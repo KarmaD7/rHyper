@@ -27,6 +27,7 @@ use core::sync::atomic::{AtomicBool, Ordering};
 
 use arch::instructions::wait_for_ints;
 use device::console_putchar;
+use spin::Mutex;
 
 use crate::platform::mp::start_secondary_cpus;
 
@@ -93,7 +94,19 @@ fn rust_main(cpu_id: usize) {
 #[no_mangle]
 fn rust_main_secondary(cpu_id: usize) {
     // todo
-    console_putchar('z' as u8);
+    println!("Hello World from cpu {}", cpu_id);
+    // console_putchar('z' as u8);
+    // console_putchar('b' as u8);
+    // console_putchar('d' as u8);
+    // info!("CPU {} initialized.", cpu_id);
     // info!("CPU {} initialized.", cpu_id);
     wait_for_ints();
 }
+
+// fn test_output(val: &str) {
+//     static LOCK: Mutex<()> = Mutex::new(());
+//     LOCK.lock();
+//     for s in val.chars() {
+//         console_putchar(s as u8);
+//     }
+// }
