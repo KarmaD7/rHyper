@@ -1,11 +1,6 @@
-use crate::config::{BOOT_KERNEL_STACK_SIZE, CPU_NUM};
+use crate::config::CPU_NUM;
 
-use super::{psci::psci_start_cpu, BOOT_STACK};
-
-// use super::psci::start_cpu;
-
-// #[link_section = ".bss.stack"]
-// static mut SECONDARY_BOOT_STACK: [[u8; BOOT_KERNEL_STACK_SIZE]; CPU_NUM - 1] = [[0; BOOT_KERNEL_STACK_SIZE]; CPU_NUM - 1];
+use super::psci::psci_start_cpu;
 
 extern "C" {
     fn _start_secondary();

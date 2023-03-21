@@ -8,8 +8,6 @@ use tock_registers::interfaces::{ReadWriteable, Readable, Writeable};
 use crate::arch::instructions;
 use crate::config::{BOOT_KERNEL_STACK_SIZE, CPU_NUM};
 
-// pub use psci::psci_start_cpu;
-
 #[link_section = ".bss.stack"]
 static mut BOOT_STACK: [u8; BOOT_KERNEL_STACK_SIZE * CPU_NUM] = [0; BOOT_KERNEL_STACK_SIZE * CPU_NUM];
 
@@ -86,8 +84,11 @@ unsafe fn init_boot_page_table() {
 #[link_section = ".text.boot"]
 unsafe extern "C" fn _start() -> ! {
     // PC = 0x4008_0000
+    // I don't know why bss.stack is useless.
     core::arch::asm!("
-        adrp    x8, boot_stack_top
+        adrp    x8, boot_stack
+        mov     x0, {boot_stack_size}
+        add     x8, x0, x8
         mov     sp, x8
 
         bl      {switch_to_el2}
@@ -95,12 +96,16 @@ unsafe extern "C" fn _start() -> ! {
         bl      {init_mmu}
 
         ldr     x8, =boot_stack_top
+        mov     x0, {boot_stack_size}
+        add     x8, x0, x8
         mov     sp, x8
+
         mrs     x0, mpidr_el1
         and     x0, x0, #0xffffff
         ldr     x8, ={rust_main}
         blr     x8
         b      .",
+        boot_stack_size = const BOOT_KERNEL_STACK_SIZE,
         switch_to_el2 = sym switch_to_el2,
         init_boot_page_table = sym init_boot_page_table,
         init_mmu = sym init_mmu,
@@ -115,6 +120,9 @@ unsafe extern "C" fn _start() -> ! {
 unsafe extern "C" fn _start_secondary() -> ! {
     core::arch::asm!("
         adrp    x8, boot_stack_top
+        mov     x0, {boot_stack_size}
+        add     x8, x0, x8
+
         mrs     x0, mpidr_el1
         and     x0, x0, #0xffffff
         mov     x19, {boot_stack_size}
@@ -127,6 +135,9 @@ unsafe extern "C" fn _start_secondary() -> ! {
         bl      {init_mmu}
 
         ldr     x8, =boot_stack_top
+        mov     x0, {boot_stack_size}
+        add     x8, x0, x8
+        
         sub     x8, x8, x19
         mov     sp, x8
 
