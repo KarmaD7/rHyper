@@ -32,6 +32,7 @@ unsafe fn switch_to_el2() {
                 + SPSR_EL3::F::Masked,
         );
         ELR_EL3.set(LR.get());
+        SP_EL1.set(BOOT_STACK.as_ptr_range().end as u64);
         asm::eret();
     }
 }
@@ -86,9 +87,7 @@ unsafe extern "C" fn _start() -> ! {
     // PC = 0x4008_0000
     // I don't know why bss.stack is useless.
     core::arch::asm!("
-        adrp    x8, boot_stack
-        mov     x0, {boot_stack_size}
-        add     x8, x0, x8
+        adrp    x8, boot_stack_top
         mov     sp, x8
 
         bl      {switch_to_el2}
@@ -96,8 +95,6 @@ unsafe extern "C" fn _start() -> ! {
         bl      {init_mmu}
 
         ldr     x8, =boot_stack_top
-        mov     x0, {boot_stack_size}
-        add     x8, x0, x8
         mov     sp, x8
 
         mrs     x0, mpidr_el1
@@ -105,7 +102,6 @@ unsafe extern "C" fn _start() -> ! {
         ldr     x8, ={rust_main}
         blr     x8
         b      .",
-        boot_stack_size = const BOOT_KERNEL_STACK_SIZE,
         switch_to_el2 = sym switch_to_el2,
         init_boot_page_table = sym init_boot_page_table,
         init_mmu = sym init_mmu,
@@ -120,8 +116,6 @@ unsafe extern "C" fn _start() -> ! {
 unsafe extern "C" fn _start_secondary() -> ! {
     core::arch::asm!("
         adrp    x8, boot_stack_top
-        mov     x0, {boot_stack_size}
-        add     x8, x0, x8
 
         mrs     x0, mpidr_el1
         and     x0, x0, #0xffffff
@@ -135,9 +129,6 @@ unsafe extern "C" fn _start_secondary() -> ! {
         bl      {init_mmu}
 
         ldr     x8, =boot_stack_top
-        mov     x0, {boot_stack_size}
-        add     x8, x0, x8
-        
         sub     x8, x8, x19
         mov     sp, x8
 
