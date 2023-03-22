@@ -12,6 +12,8 @@ pub use self::ept::ExtendedPageTable as NestedPageTable;
 pub use self::s1pt::{PageTable, Stage1PTE};
 pub use self::ArmPerCpuState as ArchPerCpuState;
 use crate::{RvmHal, RvmResult};
+use aarch64_cpu::registers::HCR_EL2;
+use tock_registers::interfaces::Writeable;
 pub use vcpu::ArmVcpu as RvmVcpu;
 pub use vcpu::{ArmExitInfo, ArmExitReason};
 
@@ -36,6 +38,7 @@ impl<H: RvmHal> ArmPerCpuState<H> {
     }
 
     pub fn hardware_enable(&mut self) -> RvmResult {
+        // HCR_EL2.write(field)
         Ok(())
     }
 

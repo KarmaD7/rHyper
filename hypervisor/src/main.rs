@@ -99,7 +99,7 @@ fn rust_main(cpu_id: usize) {
     INIT_OK.store(true, Ordering::SeqCst);
     info!("Initialization completed.\n");
     start_secondary_cpus(cpu_id);
-    hv::run();
+    hv::run(cpu_id);
     // arch::instructions::wait_for_ints();
 }
 
@@ -107,12 +107,13 @@ fn rust_main(cpu_id: usize) {
 fn rust_main_secondary(cpu_id: usize) {
     // todo
     info!("Hello World from cpu {}", cpu_id);
+    hv::run(cpu_id);
     // console_putchar('z' as u8);
     // console_putchar('b' as u8);
     // console_putchar('d' as u8);
     // info!("CPU {} initialized.", cpu_id);
     // info!("CPU {} initialized.", cpu_id);
-    wait_for_ints();
+    // wait_for_ints();
 }
 
 // fn test_output(val: &str) {

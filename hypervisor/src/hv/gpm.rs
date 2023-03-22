@@ -65,9 +65,6 @@ impl MapRegion {
         debug!("end {:x}", end);
         while start < end {
             let target = self.target(start);
-            if start == 0x4008_0000 {
-                info!("vaddr {:x} mapped to paddr {:x}", start, target);
-            }
             npt.map(start, target, self.flags)?;
             start += PAGE_SIZE;
         }

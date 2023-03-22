@@ -9,27 +9,29 @@ use self::gconfig::*;
 use self::gpm::{GuestMemoryRegion, GuestPhysMemorySet};
 use self::hal::RvmHalImpl;
 use crate::arch::instructions;
+use crate::config::CPU_NUM;
 use crate::mm::address::{phys_to_virt, virt_to_phys};
 
 #[repr(align(4096))]
+#[derive(Clone, Copy)]
 struct AlignedMemory<const LEN: usize>([u8; LEN]);
 
-static mut GUEST_PHYS_MEMORY: AlignedMemory<GUEST_PHYS_MEMORY_SIZE> =
-    AlignedMemory([0; GUEST_PHYS_MEMORY_SIZE]);
+static mut GUEST_PHYS_MEMORY: [AlignedMemory<GUEST_PHYS_MEMORY_SIZE>; CPU_NUM] =
+    [AlignedMemory([0; GUEST_PHYS_MEMORY_SIZE]); CPU_NUM];
 
-fn gpa_as_mut_ptr(guest_paddr: GuestPhysAddr) -> *mut u8 {
-    let offset = unsafe { &GUEST_PHYS_MEMORY as *const _ as usize };
+fn gpa_as_mut_ptr(guest_paddr: GuestPhysAddr, cpu_id: usize) -> *mut u8 {
+    let offset = unsafe { &GUEST_PHYS_MEMORY[cpu_id] as *const _ as usize };
     let host_vaddr = guest_paddr - GUEST_PHYS_MEMORY_BASE + offset;
-    debug!("Host vaddr is {:x}.", host_vaddr);
+    // debug!("Host vaddr is {:x}.", host_vaddr);
     host_vaddr as *mut u8
 }
 
-fn load_guest_image(hpa: HostPhysAddr, load_gpa: GuestPhysAddr, size: usize) {
+fn load_guest_image(hpa: HostPhysAddr, load_gpa: GuestPhysAddr, size: usize, cpu_id: usize) {
     debug!("loading guest image");
     let image_ptr = phys_to_virt(hpa) as *const u8;
     let image = unsafe { core::slice::from_raw_parts(image_ptr, size) };
     unsafe {
-        core::slice::from_raw_parts_mut(gpa_as_mut_ptr(load_gpa), size).copy_from_slice(image)
+        core::slice::from_raw_parts_mut(gpa_as_mut_ptr(load_gpa, cpu_id), size).copy_from_slice(image)
     }
 }
 
@@ -59,7 +61,7 @@ fn load_guest_image(hpa: HostPhysAddr, load_gpa: GuestPhysAddr, size: usize) {
 //     // );
 // }
 
-fn setup_gpm() -> RvmResult<GuestPhysMemorySet> {
+fn setup_gpm(cpu_id: usize) -> RvmResult<GuestPhysMemorySet> {
     // setup_guest_page_table();
     // debug!("Set guest page table.");
 
@@ -71,17 +73,16 @@ fn setup_gpm() -> RvmResult<GuestPhysMemorySet> {
     //         0x100,
     //     );
     // }
-    load_guest_image(GUEST_IMAGE_PADDR, GUEST_ENTRY, GUEST_IMAGE_SIZE);
+    load_guest_image(GUEST_IMAGE_PADDR + cpu_id * GUEST_IMAGE_SIZE, GUEST_ENTRY, GUEST_IMAGE_SIZE, cpu_id);
 
     debug!("before setup gpm.");
     // create nested page table and add mapping
     let mut gpm = GuestPhysMemorySet::new()?;
-    debug!("HPA: {:x}", gpa_as_mut_ptr(0) as HostVirtAddr);
     let guest_memory_regions = [
         GuestMemoryRegion {
             // RAM
             gpa: GUEST_PHYS_MEMORY_BASE,
-            hpa: virt_to_phys(gpa_as_mut_ptr(GUEST_PHYS_MEMORY_BASE) as HostVirtAddr),
+            hpa: virt_to_phys(gpa_as_mut_ptr(GUEST_PHYS_MEMORY_BASE, cpu_id) as HostVirtAddr),
             size: GUEST_PHYS_MEMORY_SIZE,
             flags: MemFlags::READ | MemFlags::WRITE | MemFlags::EXECUTE,
         },
@@ -107,15 +108,18 @@ fn setup_gpm() -> RvmResult<GuestPhysMemorySet> {
     Ok(gpm)
 }
 
-pub fn run() -> ! {
+pub fn run(cpu_id: usize) -> ! {
     println!("Starting virtualization...");
     println!("Hardware support: {:?}", rvm::has_hardware_support());
 
-    let mut percpu = RvmPerCpu::<RvmHalImpl>::new(0);
+    let mut percpu = RvmPerCpu::<RvmHalImpl>::new(cpu_id);
     percpu.hardware_enable().unwrap();
     debug!("Vcpu Created.");
 
-    let gpm = setup_gpm().unwrap();
+    if cpu_id == 0 {
+        
+    }
+    let gpm = setup_gpm(cpu_id).unwrap();
     // info!("{:#x?}", gpm);
     debug!("Setup GPM.");
 
