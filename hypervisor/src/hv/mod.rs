@@ -1,3 +1,4 @@
+mod device_emu;
 mod gconfig;
 mod gpm;
 mod hal;
@@ -31,7 +32,8 @@ fn load_guest_image(hpa: HostPhysAddr, load_gpa: GuestPhysAddr, size: usize, cpu
     let image_ptr = phys_to_virt(hpa) as *const u8;
     let image = unsafe { core::slice::from_raw_parts(image_ptr, size) };
     unsafe {
-        core::slice::from_raw_parts_mut(gpa_as_mut_ptr(load_gpa, cpu_id), size).copy_from_slice(image)
+        core::slice::from_raw_parts_mut(gpa_as_mut_ptr(load_gpa, cpu_id), size)
+            .copy_from_slice(image)
     }
 }
 
@@ -73,7 +75,12 @@ fn setup_gpm(cpu_id: usize) -> RvmResult<GuestPhysMemorySet> {
     //         0x100,
     //     );
     // }
-    load_guest_image(GUEST_IMAGE_PADDR + cpu_id * GUEST_IMAGE_SIZE, GUEST_ENTRY, GUEST_IMAGE_SIZE, cpu_id);
+    load_guest_image(
+        GUEST_IMAGE_PADDR + cpu_id * GUEST_IMAGE_SIZE,
+        GUEST_ENTRY,
+        GUEST_IMAGE_SIZE,
+        cpu_id,
+    );
 
     debug!("before setup gpm.");
     // create nested page table and add mapping
@@ -116,9 +123,7 @@ pub fn run(cpu_id: usize) -> ! {
     percpu.hardware_enable().unwrap();
     debug!("Vcpu Created.");
 
-    if cpu_id == 0 {
-        
-    }
+    if cpu_id == 0 {}
     let gpm = setup_gpm(cpu_id).unwrap();
     // info!("{:#x?}", gpm);
     debug!("Setup GPM.");

@@ -47,7 +47,6 @@ const LOGO: &str = r"
   /____/ \____/  /____/ /____/
 ";
 
-
 extern "C" {
     fn stext();
     fn etext();
@@ -79,7 +78,10 @@ fn rust_main(cpu_id: usize) {
     device::init_early();
     println!("{}", LOGO);
     println!("primary cpu id: {}.", cpu_id);
-    println!("boot stack: 0x{:x}, boot stack top: 0x{:x}", boot_stack as usize, boot_stack_top as usize);
+    println!(
+        "boot stack: 0x{:x}, boot stack top: 0x{:x}",
+        boot_stack as usize, boot_stack_top as usize
+    );
     println!(
         "\
         arch = {}\n\

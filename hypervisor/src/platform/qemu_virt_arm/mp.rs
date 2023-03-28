@@ -22,6 +22,3 @@ pub fn start_secondary_cpus(primary_cpu_id: usize) {
 fn start_secondary_cpu(cpu_id: usize, entry: usize, stack_top: usize) {
     psci_start_cpu(cpu_id, entry)
 }
-
-
-

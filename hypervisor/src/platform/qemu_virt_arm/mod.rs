@@ -9,7 +9,8 @@ use crate::arch::instructions;
 use crate::config::{BOOT_KERNEL_STACK_SIZE, CPU_NUM};
 
 #[link_section = ".bss.stack"]
-static mut BOOT_STACK: [u8; BOOT_KERNEL_STACK_SIZE * CPU_NUM] = [0; BOOT_KERNEL_STACK_SIZE * CPU_NUM];
+static mut BOOT_STACK: [u8; BOOT_KERNEL_STACK_SIZE * CPU_NUM] =
+    [0; BOOT_KERNEL_STACK_SIZE * CPU_NUM];
 
 #[link_section = ".data.boot_page_table"]
 static mut BOOT_PT_L0: [Stage1PTE; 512] = [Stage1PTE::empty(); 512];
