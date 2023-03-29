@@ -1,5 +1,8 @@
-use aarch64_cpu::registers::ESR_EL2;
+use aarch64_cpu::registers::{ESR_EL2, FAR_EL2};
 use rvm::{RvmResult, RvmVcpu};
+use tock_registers::interfaces::Readable;
+
+use crate::hv::device_emu::all_virt_devices;
 
 use super::hal::RvmHalImpl;
 
@@ -20,11 +23,21 @@ fn handle_iabt(vcpu: &mut Vcpu) -> RvmResult {
     let regs = vcpu.regs();
     // info!("VTTBR_EL2: {:x}", VTTBR_EL2.get());
     // vcpu.advance_rip()?;
-    Ok(())
+    // Ok(())
+    Err(rvm::RvmError::ResourceBusy)
 }
 
 fn handle_dabt(vcpu: &mut Vcpu) -> RvmResult {
-    todo!()
+    // we need to add HPFAR_EL2 to aarch64_cpu
+    // FAR_EL2 val is not correct, we use it temporarily
+    let fault_vaddr = FAR_EL2.get();
+    if let Some(dev) = all_virt_devices().find_mmio_device(fault_vaddr as usize) {
+        // decode the instruction by hand....
+        
+        Ok(())
+    } else {
+        Err(rvm::RvmError::OutOfMemory)
+    }
 }
 
 #[no_mangle]
@@ -54,7 +67,9 @@ pub fn vmexit_handler(vcpu: &mut Vcpu) -> RvmResult {
 }
 
 #[no_mangle]
-pub fn irq_handler(vcpu: &mut Vcpu) -> RvmResult {
-    // let irq_number =
-    todo!()
+pub fn irq_handler() -> RvmResult {
+    info!("IRQ routed to EL2");
+    Ok(())
+    // // let irq_number =
+    // todo!()
 }

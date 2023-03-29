@@ -70,13 +70,13 @@
     b       .Lexception_return
 .endm
 
-// .macro HANDLE_IRQ
-// .p2align 7
-//     SAVE_REGS
-//     mov     x0, sp
-//     bl      handle_irq_exception
-//     b       .Lexception_return
-// .endm
+.macro HANDLE_IRQ
+.p2align 7
+    SAVE_REGS
+    mov     x0, sp
+    bl      irq_handler
+    b       .Lexception_return
+.endm
 
 .section .text
 .p2align 11
@@ -89,13 +89,13 @@ exception_vector_base:
 
     // current EL, with SP_ELx
     HANDLE_SYNC
-    HANDLE_SYNC
+    HANDLE_IRQ
     HANDLE_SYNC
     HANDLE_SYNC
 
     // lower EL, aarch64
     HANDLE_SYNC
-    HANDLE_SYNC
+    HANDLE_IRQ
     HANDLE_SYNC
     HANDLE_SYNC
 

@@ -19,8 +19,8 @@ const UART_FIFO_CAPACITY: usize = 16;
 bitflags::bitflags! {
     /// Line status flags
     struct LineStsFlags: u8 {
-        const INPUT_FULL = 1;
-        // 1 to 4 unknown
+        // 0 to 3 unknown
+        const INPUT_FULL = 1 << 4;
         const OUTPUT_EMPTY = 1 << 5;
         // 6 and 7 unknown
     }
