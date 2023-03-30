@@ -2,7 +2,7 @@ use aarch64_cpu::registers::{ESR_EL2, FAR_EL2};
 use rvm::{RvmResult, RvmVcpu};
 use tock_registers::interfaces::Readable;
 
-use crate::{hv::device_emu::all_virt_devices, device::pending_irq};
+use crate::{hv::device_emu::all_virt_devices, device::{pending_irq, inject_irq}};
 
 use super::hal::RvmHalImpl;
 
@@ -80,7 +80,9 @@ pub fn irq_handler() -> RvmResult {
     // info!("IRQ routed to EL2");
     if let Some(irq_id) = pending_irq() {
         info!("IRQ {} routed to EL2", irq_id);
+        inject_irq(irq_id);
     }
+
     Ok(())
     // // let irq_number =
     // todo!()

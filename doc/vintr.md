@@ -220,3 +220,4 @@ After the virtual machine completes processing the corresponding virtual interru
 GICV_EOIR or GICV_AEOIR to deactivate the interrupt. This deactivates both the virtual interrupt and the corresponding physical interrupt, provided that both of the following conditions are true:
 • the GICV_CTLR.EOImode bit is set to 0
 • the GICH_LRn.HW bit is set to 1.
+

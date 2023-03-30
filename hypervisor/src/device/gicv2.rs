@@ -287,16 +287,19 @@ impl Gic {
             let mut val = 0;
 
             val = irq_id as u32;
+            val |= LR_PENDING_BIT;
 
             if false
             /* sgi */
             {
                 todo!()
             } else {
-                val |= (irq_id & LR_PHYSIRQ_MASK) as u32;
+
+                val |= ((irq_id << 10) & LR_PHYSIRQ_MASK) as u32;
                 val |= LR_HW_BIT;
             }
 
+            debug!("To write lr {} val {}", lr_idx, val);
             self.write_lr(lr_idx as usize, val);
         }
     }
@@ -332,10 +335,10 @@ impl Gic {
         gicd.CTLR.set(1);
         gicc.CTLR.set(1);
         gich.HCR.set(1);
-        gicv.CTLR.set(1);
+        gicv.CTLR.set(3);
         // unmask interrupts at all priority levels
         gicc.PMR.set(0xff);
-        // gicv.PMR
+        gicv.PMR.set(0xff);
     }
 }
 
