@@ -2,7 +2,7 @@ use aarch64_cpu::registers::{ESR_EL2, FAR_EL2};
 use rvm::{RvmResult, RvmVcpu};
 use tock_registers::interfaces::Readable;
 
-use crate::hv::device_emu::all_virt_devices;
+use crate::{hv::device_emu::all_virt_devices, device::pending_irq};
 
 use super::hal::RvmHalImpl;
 
@@ -15,6 +15,12 @@ fn handle_hypercall(vcpu: &mut Vcpu) -> RvmResult {
         regs.x[0],
         [regs.x[1], regs.x[2], regs.x[3], regs.x[4]]
     );
+    match regs.x[0] {
+        PSCI_CPU_OFF  => {
+            loop {}
+        },
+        _ => {}
+    }
     Ok(())
 }
 
@@ -47,7 +53,10 @@ pub fn vmexit_handler(vcpu: &mut Vcpu) -> RvmResult {
 
     let res = match exit_info.exit_reason {
         Some(ESR_EL2::EC::Value::HVC64) => handle_hypercall(vcpu),
-        // Some(ESR_EL2::EC::Value::InstrAbortLowerEL) => handle_iabt(vcpu),
+        Some(ESR_EL2::EC::Value::InstrAbortLowerEL) => handle_iabt(vcpu),
+        Some(ESR_EL2::EC::Value::InstrAbortCurrentEL) => handle_iabt(vcpu),
+        Some(ESR_EL2::EC::Value::DataAbortLowerEL) => handle_dabt(vcpu),
+        Some(ESR_EL2::EC::Value::DataAbortCurrentEL) => handle_dabt(vcpu),
         _ => panic!(
             "Unhandled VM-Exit reason {:?}:\n{:#x?}",
             exit_info.exit_reason.unwrap() as u64,
@@ -68,7 +77,10 @@ pub fn vmexit_handler(vcpu: &mut Vcpu) -> RvmResult {
 
 #[no_mangle]
 pub fn irq_handler() -> RvmResult {
-    info!("IRQ routed to EL2");
+    // info!("IRQ routed to EL2");
+    if let Some(irq_id) = pending_irq() {
+        info!("IRQ {} routed to EL2", irq_id);
+    }
     Ok(())
     // // let irq_number =
     // todo!()

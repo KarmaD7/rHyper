@@ -75,6 +75,7 @@ pub fn init_ok() -> bool {
 #[no_mangle]
 fn rust_main(cpu_id: usize) {
     clear_bss();
+    arch::init();
     device::init_early();
     println!("{}", LOGO);
     println!("primary cpu id: {}.", cpu_id);

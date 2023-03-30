@@ -1,6 +1,7 @@
 use core::arch::asm;
 
-const PSCI_CPU_ON: usize = 0x84000003;
+pub const PSCI_CPU_ON: usize = 0x84000003;
+pub const PSCI_CPU_OFF: usize = 0x84000008;
 
 fn psci_smc_call(func: usize, args0: usize, args1: usize, args2: usize) -> usize {
     let ret;

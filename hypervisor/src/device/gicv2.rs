@@ -343,6 +343,16 @@ pub fn set_enable(vector: usize, enable: bool) {
     GIC.lock().set_enable(vector, enable);
 }
 
+pub fn pending_irq() -> Option<usize> {
+    GIC.lock().pending_irq()
+}
+
+pub fn inject_irq(irq_id: usize) {
+    GIC.lock().inject_irq(irq_id)
+}
+
+// pub fn pending_irq() -> Option<>
+
 pub fn handle_irq(_vector: usize) {
     if let Some(vector) = GIC.lock().pending_irq() {
         // HANDLERS.handle(vector);
