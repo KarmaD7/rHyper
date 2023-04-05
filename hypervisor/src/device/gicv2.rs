@@ -335,7 +335,7 @@ impl Gic {
         gicd.CTLR.set(1);
         gicc.CTLR.set(1);
         gich.HCR.set(1);
-        gicv.CTLR.set(3);
+        gicv.CTLR.set(1);
         // unmask interrupts at all priority levels
         gicc.PMR.set(0xff);
         gicv.PMR.set(0xff);

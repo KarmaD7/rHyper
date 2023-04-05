@@ -221,3 +221,7 @@ GICV_EOIR or GICV_AEOIR to deactivate the interrupt. This deactivates both the v
 • the GICV_CTLR.EOImode bit is set to 0
 • the GICH_LRn.HW bit is set to 1.
 
+- 模拟 GICD
+- 直通 GICV
+- 不允许访问 GICH
+
