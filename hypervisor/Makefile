@@ -3,6 +3,7 @@ MODE ?= release
 LOG ?= warn
 SMP ?= 1
 
+GUEST_IMG_NIMBOS ?= ../bin/nimbos.bin
 GUEST_IMG_1 ?= ../bin/arceos-helloworld.bin
 GUEST_IMG_2 ?= ../bin/arceos-memtest_qemu.bin
 
@@ -43,7 +44,7 @@ ifeq ($(ARCH), aarch64)
 endif
 
 qemu_args += -device loader,addr=0x4001000,file=$(GUEST_IMG_1),force-raw=on
-# qemu_args += -device loader,addr=0x4101000,file=$(GUEST_IMG_2),force-raw=on
+qemu_args += -device loader,addr=0x4101000,file=$(GUEST_IMG_2),force-raw=on
 
 build: $(target_bin)
 

@@ -70,11 +70,6 @@ impl<H: RvmHal> ArmVcpu<H> {
         &mut self.guest_regs
     }
 
-    pub fn advance_rip(&mut self) -> RvmResult {
-        self.elr += 4;
-        Ok(())
-    }
-
     pub fn set_page_table_root(&self, root: usize) {
         info!("TTBR0 set baddr {}", root);
         let attr0 = MAIR_EL1::Attr0_Device::nonGathering_nonReordering_EarlyWriteAck;
@@ -99,16 +94,12 @@ impl<H: RvmHal> ArmVcpu<H> {
         SCTLR_EL1.write(SCTLR_EL1::M::Enable + SCTLR_EL1::C::Cacheable + SCTLR_EL1::I::Cacheable);
     }
 
-    pub fn set_stack_pointer(&mut self, sp: usize) {
-        self.guest_sp = sp as u64;
-    }
-
     fn setup(&self, npt_root: HostPhysAddr) -> RvmResult {
         // Disable EL1 timer traps and the timer offset.
         CNTHCTL_EL2.modify(CNTHCTL_EL2::EL1PCEN::SET + CNTHCTL_EL2::EL1PCTEN::SET);
         CNTVOFF_EL2.set(0);
         HCR_EL2.write(
-            HCR_EL2::VM::Enable + HCR_EL2::RW::EL1IsAarch64 + HCR_EL2::AMO::SET + HCR_EL2::FMO::SET + HCR_EL2::IMO::SET,
+            HCR_EL2::VM::Enable + HCR_EL2::RW::EL1IsAarch64 + HCR_EL2::AMO::SET + HCR_EL2::FMO::SET,
         );
 
         let vtcr_flags = VTCR_EL2::TG0::Granule4KB
