@@ -13,3 +13,16 @@ Virtual interrupts are controlled per interrupt type. In theory, a VM could be c
 4. The hypervisor returns control to the vCPU.
 5. Now that the processor is in the vCPU (EL0 or EL1), the virtual interrupt from the GIC can be
 taken. This virtual interrupt is subject to the PSTATE exception masks.
+
+mmio handle dabt:
+
+	u32 iss		= ESR_ISS(ctx->esr);
+	u32 isv		= iss >> 24;
+	u32 sas		= iss >> 22 & 0x3;
+	u32 sse		= iss >> 21 & 0x1;
+	u32 srt		= iss >> 16 & 0x1f;
+	u32 ea		= iss >> 9 & 0x1;
+	u32 cm		= iss >> 8 & 0x1;
+	u32 s1ptw	= iss >> 7 & 0x1;
+	u32 is_write	= iss >> 6 & 0x1;
+	u32 size	= 1 << sas;

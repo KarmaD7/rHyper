@@ -70,6 +70,7 @@ impl<H: RvmHal> ArmVcpu<H> {
         &mut self.guest_regs
     }
 
+
     pub fn set_page_table_root(&self, root: usize) {
         info!("TTBR0 set baddr {}", root);
         let attr0 = MAIR_EL1::Attr0_Device::nonGathering_nonReordering_EarlyWriteAck;

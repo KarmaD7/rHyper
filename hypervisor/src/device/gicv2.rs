@@ -259,8 +259,6 @@ impl Gic {
         }
     }
 
-    // just translate from jailhouse, not rust-like
-    // error to be handled
     fn inject_irq(&self, irq_id: usize) {
         debug!("To Inject IRQ {}", irq_id);
         let elsr: u64 = (self.gich().ELSR1.get() as u64) << 32 | self.gich().ELSR0.get() as u64;

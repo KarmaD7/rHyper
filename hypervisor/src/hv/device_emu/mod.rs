@@ -1,6 +1,7 @@
 use alloc::{sync::Arc, vec, vec::Vec};
 
 mod pl011;
+mod vgic;
 
 pub trait MMIODevice: Send + Sync {
     fn mem_range(&self) -> core::ops::Range<usize>;

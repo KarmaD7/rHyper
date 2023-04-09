@@ -114,6 +114,12 @@ fn setup_gpm(cpu_id: usize) -> RvmResult<GuestPhysMemorySet> {
             size: 0x10000,
             flags: MemFlags::READ | MemFlags::WRITE | MemFlags::DEVICE,
         },
+        GuestMemoryRegion {
+            gpa: 0x0a00_0000,
+            hpa: 0x0a00_0000,
+            size: 0x4000,
+            flags: MemFlags::READ | MemFlags::WRITE | MemFlags::DEVICE,
+        },
     ];
     for r in guest_memory_regions.into_iter() {
         info!("mapping");

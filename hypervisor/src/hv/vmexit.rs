@@ -37,9 +37,29 @@ fn handle_dabt(vcpu: &mut Vcpu) -> RvmResult {
     // we need to add HPFAR_EL2 to aarch64_cpu
     // FAR_EL2 val is not correct, we use it temporarily
     let fault_vaddr = FAR_EL2.get();
+    let iss = ESR_EL2.read(ESR_EL2::ISS);
+    let isv = iss >> 24;
+    let sas = iss >> 22 & 0x3;
+    let sse = iss >> 21 & 0x1;
+    let srt = iss >> 16 & 0x1f;
+    let ea		= iss >> 9 & 0x1;
+	let cm		= iss >> 8 & 0x1;
+	let s1ptw	= iss >> 7 & 0x1;
+    let is_write = iss >> 6 & 0x1;
+    let size = 1 << sas;
+    let val = if is_write == 1 && srt != 31 {
+        vcpu.regs().x[srt as usize]
+    } else {
+        0
+    };
+
     if let Some(dev) = all_virt_devices().find_mmio_device(fault_vaddr as usize) {
         // decode the instruction by hand....
-        
+        if is_write == 1 {
+            dev.write(fault_vaddr as usize, val as u32, size)?;
+        } else {
+            vcpu.regs_mut().x[srt as usize] = dev.read(fault_vaddr as usize, size)? as u64;
+        }
         Ok(())
     } else {
         Err(rvm::RvmError::OutOfMemory)
