@@ -93,13 +93,13 @@ fn setup_gpm(cpu_id: usize) -> RvmResult<GuestPhysMemorySet> {
             size: GUEST_PHYS_MEMORY_SIZE,
             flags: MemFlags::READ | MemFlags::WRITE | MemFlags::EXECUTE,
         },
-        GuestMemoryRegion {
-            // pl011
-            gpa: 0x0900_0000,
-            hpa: 0x0900_0000,
-            size: 0x1000,
-            flags: MemFlags::READ | MemFlags::WRITE | MemFlags::DEVICE,
-        },
+        // GuestMemoryRegion {
+        //     // pl011
+        //     gpa: 0x0900_0000,
+        //     hpa: 0x0900_0000,
+        //     size: 0x1000,
+        //     flags: MemFlags::READ | MemFlags::WRITE | MemFlags::DEVICE,
+        // },
         GuestMemoryRegion {
             // GICD -> emulate
             gpa: 0x0800_0000,

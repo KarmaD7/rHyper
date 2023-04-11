@@ -86,6 +86,7 @@ impl MMIODevice for Pl011 {
     }
 
     fn read(&self, addr: usize, access_size: u8) -> RvmResult<u32>  {
+        debug!("pl011 read mock, addr: {:#x}", addr);
         let ret = match addr - self.base_vaddr {
             PL011_DR => {
                 let mut fifo = self.fifo.lock();
@@ -97,7 +98,7 @@ impl MMIODevice for Pl011 {
             },
             PL011_FR => {
                 let mut fifo = self.fifo.lock();
-                let mut fr = LineStsFlags::OUTPUT_EMPTY;
+                let mut fr = LineStsFlags::empty();
 
                 if !fifo.is_full() {
                     if let Some(b) = console_getchar() {
@@ -113,10 +114,12 @@ impl MMIODevice for Pl011 {
             },
             _ => unreachable!()
         };
+        debug!("ret {:x}", ret);
         Ok(ret as u32)
     }
 
     fn write(&self, addr: usize, val: u32, access_size: u8) -> RvmResult {
+        debug!("pl011 write mock, addr: {:#x}", addr);
         match addr - self.base_vaddr {
             PL011_DR => console_putchar(val as u8),
             PL011_FR => {},

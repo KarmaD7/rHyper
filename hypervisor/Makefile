@@ -2,10 +2,11 @@ ARCH ?= aarch64
 MODE ?= release
 LOG ?= warn
 SMP ?= 1
+GUEST ?= nimbos
 
 GUEST_IMG_NIMBOS ?= ../bin/nimbos.bin
 GUEST_IMG_1 ?= ../bin/arceos-helloworld.bin
-GUEST_IMG_2 ?= ../bin/arceos-httpserver.bin
+GUEST_IMG_2 ?= ../bin/arceos-memtest_qemu.bin
 
 qemu := qemu-system-$(ARCH)
 qemu_args := -nographic -m 128M
@@ -43,8 +44,12 @@ ifeq ($(ARCH), aarch64)
 		-smp $(SMP)
 endif
 
-qemu_args += -device loader,addr=0x4001000,file=$(GUEST_IMG_NIMBOS),force-raw=on
-# qemu_args += -device loader,addr=0x4101000,file=$(GUEST_IMG_2),force-raw=on
+ifeq ($(GUEST), nimbos)
+	qemu_args += -device loader,addr=0x4001000,file=$(GUEST_IMG_NIMBOS),force-raw=on
+else 
+	qemu_args += -device loader,addr=0x4001000,file=$(GUEST_IMG_1),force-raw=on
+	qemu_args += -device loader,addr=0x4101000,file=$(GUEST_IMG_2),force-raw=on
+endif
 
 build: $(target_bin)
 

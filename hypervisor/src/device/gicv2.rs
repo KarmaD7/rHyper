@@ -333,10 +333,8 @@ impl Gic {
         gicd.CTLR.set(1);
         gicc.CTLR.set(1);
         gich.HCR.set(1);
-        gicv.CTLR.set(1);
         // unmask interrupts at all priority levels
         gicc.PMR.set(0xff);
-        gicv.PMR.set(0xff);
     }
 }
 
@@ -350,6 +348,10 @@ pub fn pending_irq() -> Option<usize> {
 
 pub fn inject_irq(irq_id: usize) {
     GIC.lock().inject_irq(irq_id)
+}
+
+pub fn deactivate_irq(irq_id: usize) {
+    GIC.lock().eoi(irq_id)
 }
 
 // pub fn pending_irq() -> Option<>
