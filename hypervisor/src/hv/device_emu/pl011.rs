@@ -20,8 +20,8 @@ bitflags::bitflags! {
     /// Line status flags
     struct LineStsFlags: u8 {
         // 0 to 3 unknown
-        const INPUT_FULL = 1 << 4;
-        const OUTPUT_EMPTY = 1 << 5;
+        const INPUT_EMPTY = 1 << 4;
+        const OUTPUT_FULL = 1 << 5;
         // 6 and 7 unknown
     }
 }
@@ -106,8 +106,8 @@ impl MMIODevice for Pl011 {
                     }
                 }
 
-                if !fifo.is_empty() {
-                    fr |= LineStsFlags::INPUT_FULL;
+                if fifo.is_empty() {
+                    fr |= LineStsFlags::INPUT_EMPTY;
                 }
 
                 fr.bits()

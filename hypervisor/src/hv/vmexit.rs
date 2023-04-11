@@ -55,13 +55,12 @@ fn handle_dabt(vcpu: &mut Vcpu) -> RvmResult {
     };
 
     if let Some(dev) = all_virt_devices().find_mmio_device(fault_vaddr as usize) {
-        // decode the instruction by hand....
-        info!("iss {:x} is write {}", iss, is_write);
+        // info!("iss {:x} is write {}", iss, is_write);
         if is_write == 1 {
             dev.write(fault_vaddr as usize, val as u32, size)?;
         } else {
             vcpu.regs_mut().x[srt as usize] = dev.read(fault_vaddr as usize, size)? as u64;
-            info!("srt {:x} read val {:x}", srt, vcpu.regs().x[srt as usize]);
+            // info!("elr {:x} srt {:x} read val {:x}", vcpu.elr, srt, vcpu.regs().x[srt as usize]);
         }
         vcpu.advance_rip()?;
         Ok(())

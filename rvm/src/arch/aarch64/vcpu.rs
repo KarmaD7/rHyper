@@ -19,7 +19,7 @@ use super::{regs::GeneralRegisters, ArchPerCpuState};
 pub struct ArmVcpu<H: RvmHal> {
     guest_regs: GeneralRegisters,
     guest_sp: u64,
-    elr: u64,
+    pub elr: u64,
     spsr: u64,
     host_stack_top: u64,
     _phantom_data: PhantomData<H>,
@@ -60,6 +60,13 @@ impl<H: RvmHal> ArmVcpu<H> {
             exit_reason: ESR_EL2.read_as_enum(ESR_EL2::EC),
             guest_pc: ELR_EL2.get(),
         })
+    }
+
+    pub fn advance_rip(&mut self) -> RvmResult {
+        let mut elr_el2 = ELR_EL2.get();
+        elr_el2 += 4;
+        ELR_EL2.set(elr_el2);
+        Ok(())
     }
 
     pub fn regs(&self) -> &GeneralRegisters {

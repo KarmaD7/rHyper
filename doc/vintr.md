@@ -225,3 +225,6 @@ GICV_EOIR or GICV_AEOIR to deactivate the interrupt. This deactivates both the v
 - 直通 GICV
 - 不允许访问 GICH
 
+in jailhouse:
+
+irqchip_handle_irq -> irqchip_handle_phys_irq
