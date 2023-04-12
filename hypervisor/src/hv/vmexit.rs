@@ -27,10 +27,9 @@ fn handle_hypercall(vcpu: &mut Vcpu) -> RvmResult {
 
 fn handle_iabt(vcpu: &mut Vcpu) -> RvmResult {
     // todo!();
-    let regs = vcpu.regs();
     // info!("VTTBR_EL2: {:x}", VTTBR_EL2.get());
-    vcpu.advance_rip()?;
     // Ok(())
+    error!("Instruction abort!!!");
     Err(rvm::RvmError::ResourceBusy)
 }
 

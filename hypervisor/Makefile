@@ -44,8 +44,8 @@ endif
 ifeq ($(GUEST), nimbos)
 	qemu_args += -device loader,addr=0x4001000,file=$(GUEST_IMG_NIMBOS),force-raw=on
 else 
-	qemu_args += -device loader,addr=0x4001000,file=$(GUEST_IMG_2),force-raw=on
-	# qemu_args += -device loader,addr=0x4101000,file=$(GUEST_IMG_2),force-raw=on
+	qemu_args += -device loader,addr=0x4001000,file=$(GUEST_IMG_1),force-raw=on
+	qemu_args += -device loader,addr=0x4101000,file=$(GUEST_IMG_2),force-raw=on
 endif
 
 build: $(target_bin)

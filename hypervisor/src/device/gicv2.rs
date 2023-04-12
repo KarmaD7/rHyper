@@ -1,5 +1,5 @@
 //! ARM Generic Interrupt Controller v2.
-
+//! TODO: split GIC to GICC, GICD, GICH and GICV.
 #![allow(dead_code)]
 
 use spin::Mutex;

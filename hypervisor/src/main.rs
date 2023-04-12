@@ -99,6 +99,7 @@ fn rust_main(cpu_id: usize) {
     info!("Logging is enabled.");
 
     mm::init();
+    device::init();
     INIT_OK.store(true, Ordering::SeqCst);
     info!("Initialization completed.\n");
     start_secondary_cpus(cpu_id);
@@ -110,6 +111,7 @@ fn rust_main(cpu_id: usize) {
 fn rust_main_secondary(cpu_id: usize) {
     // todo
     arch::init();
+    device::init();
     info!("Hello World from cpu {}", cpu_id);
     hv::run(cpu_id);
     // console_putchar('z' as u8);
