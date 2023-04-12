@@ -1,5 +1,9 @@
 use rvm::RvmResult;
-use tock_registers::{register_structs, registers::{ReadWrite, ReadOnly, WriteOnly}};
+use spin::Mutex;
+use tock_registers::{
+    register_structs,
+    registers::{ReadOnly, ReadWrite, WriteOnly},
+};
 
 use super::MMIODevice;
 
@@ -7,9 +11,28 @@ pub struct Vgic {
     base_vaddr: usize,
     gicd_size: usize,
     // TODO
-    enabled: bool,
-
+    inner: Mutex<VgicdInner>,
 }
+
+#[derive(Default)]
+pub struct VgicdInner {
+    enabled: bool,
+}
+
+impl VgicdInner {
+    pub const fn new() -> Self {
+        Self { enabled: false }
+    }
+}
+
+const VGIC_CTLR: usize = 0x00;
+const VGIC_TYPER: usize = 0x04;
+const VGIC_ISENABLER: usize = 0x00;
+const VGIC_ICENABLER: usize = 0x00;
+const VGIC_ISPENDR: usize = 0x00;
+const VGIC_ICPENDR: usize = 0x00;
+const VGIC_ITARGETSR: usize = 0x00;
+const VGIC_ICFGR: usize = 0x00;
 
 // copy from gicv2.rs.
 // need to be removed.
@@ -52,10 +75,10 @@ register_structs! {
 
 impl Vgic {
     pub const fn new(base_vaddr: usize, gicd_size: usize) -> Self {
-        Self { 
-            base_vaddr, 
+        Self {
+            base_vaddr,
             gicd_size,
-            enabled: false,
+            inner: Mutex::new(VgicdInner::new()),
         }
     }
 }
@@ -67,23 +90,21 @@ impl MMIODevice for Vgic {
 
     fn read(&self, addr: usize, access_size: u8) -> RvmResult<u32> {
         // todo!()
-        match addr - self.base_vaddr {
-            CTLR => {
-                Ok(self.enabled as u32)
-            },
-            TYPER => {
-                Ok(1)
-            },
-            IIDR => {
-                Ok(0)
-            },
-            _ => {
-                Err(rvm::RvmError::InvalidParam)
-            },
-        }
+        let val = match addr - self.base_vaddr {
+            CTLR => self.inner.lock().enabled as u32,
+            TYPER => 1,
+            IIDR => 0,
+            _ => unreachable!(),
+        };
+        Ok(val)
     }
 
     fn write(&self, addr: usize, val: u32, access_size: u8) -> RvmResult {
-        todo!()
+        match addr - self.base_vaddr {
+            CTLR => self.inner.lock().enabled = val != 0,
+            _ => {},
+        }
+        Ok(())
+        // todo!()
     }
 }

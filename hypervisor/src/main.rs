@@ -109,6 +109,7 @@ fn rust_main(cpu_id: usize) {
 #[no_mangle]
 fn rust_main_secondary(cpu_id: usize) {
     // todo
+    arch::init();
     info!("Hello World from cpu {}", cpu_id);
     hv::run(cpu_id);
     // console_putchar('z' as u8);

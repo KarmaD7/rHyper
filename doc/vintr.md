@@ -228,3 +228,14 @@ GICV_EOIR or GICV_AEOIR to deactivate the interrupt. This deactivates both the v
 in jailhouse:
 
 irqchip_handle_irq -> irqchip_handle_phys_irq
+
+对 vGICD 的修改是否是 idempotent 的？ 
+
+用到的 gicd 寄存器：
+
+- CTLR 控制信息，enable or not
+- TYPER
+- ICFGR
+- ITARGETSR 路由目标
+- ICENABLER
+- ICPENDR

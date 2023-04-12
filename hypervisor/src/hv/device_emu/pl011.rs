@@ -1,7 +1,7 @@
 use rvm::RvmResult;
 use spin::Mutex;
 
-use crate::device::{console_putchar, console_getchar};
+use crate::device::{console_getchar, console_putchar};
 
 use super::MMIODevice;
 
@@ -25,7 +25,6 @@ bitflags::bitflags! {
         // 6 and 7 unknown
     }
 }
-
 
 struct Fifo<const CAP: usize> {
     buf: [u8; CAP],
@@ -68,12 +67,12 @@ impl<const CAP: usize> Fifo<CAP> {
 
 pub struct Pl011 {
     base_vaddr: usize,
-    fifo: Mutex<Fifo<UART_FIFO_CAPACITY>>
+    fifo: Mutex<Fifo<UART_FIFO_CAPACITY>>,
 }
 
 impl Pl011 {
     pub const fn new(base_vaddr: usize) -> Self {
-        Self { 
+        Self {
             base_vaddr,
             fifo: Mutex::new(Fifo::new()),
         }
@@ -85,7 +84,7 @@ impl MMIODevice for Pl011 {
         self.base_vaddr..self.base_vaddr + 0x1000
     }
 
-    fn read(&self, addr: usize, access_size: u8) -> RvmResult<u32>  {
+    fn read(&self, addr: usize, access_size: u8) -> RvmResult<u32> {
         debug!("pl011 read mock, addr: {:#x}", addr);
         let ret = match addr - self.base_vaddr {
             PL011_DR => {
@@ -95,7 +94,7 @@ impl MMIODevice for Pl011 {
                 } else {
                     fifo.pop()
                 }
-            },
+            }
             PL011_FR => {
                 let mut fifo = self.fifo.lock();
                 let mut fr = LineStsFlags::empty();
@@ -111,8 +110,8 @@ impl MMIODevice for Pl011 {
                 }
 
                 fr.bits()
-            },
-            _ => unreachable!()
+            }
+            _ => unreachable!(),
         };
         debug!("ret {:x}", ret);
         Ok(ret as u32)
@@ -122,7 +121,7 @@ impl MMIODevice for Pl011 {
         debug!("pl011 write mock, addr: {:#x}", addr);
         match addr - self.base_vaddr {
             PL011_DR => console_putchar(val as u8),
-            PL011_FR => {},
+            PL011_FR => {}
             _ => {}
         }
         Ok(())

@@ -260,7 +260,6 @@ impl Gic {
     }
 
     fn inject_irq(&self, irq_id: usize) {
-        debug!("To Inject IRQ {}", irq_id);
         let elsr: u64 = (self.gich().ELSR1.get() as u64) << 32 | self.gich().ELSR0.get() as u64;
         let lr_num = self.lr_num();
         let mut lr_idx = -1 as isize;
@@ -271,14 +270,15 @@ impl Gic {
                 }
                 continue;
             }
-
+            
             // overlap
             let lr_val = self.read_lr(i) as usize;
             if (i & LR_VIRTIRQ_MASK) == irq_id {
                 return;
             }
         }
-
+        // info!("To Inject IRQ {}, find lr {}", irq_id, lr_idx);
+        
         if lr_idx == -1 {
             return;
         } else {
@@ -292,7 +292,6 @@ impl Gic {
             {
                 todo!()
             } else {
-
                 val |= ((irq_id << 10) & LR_PHYSIRQ_MASK) as u32;
                 val |= LR_HW_BIT;
             }
@@ -331,7 +330,8 @@ impl Gic {
 
         // enable GIC
         gicd.CTLR.set(1);
-        gicc.CTLR.set(1);
+        gicc.CTLR.set(0x201); // EOIMode | En
+        gich.VMCR.set(0x201);
         gich.HCR.set(1);
         // unmask interrupts at all priority levels
         gicc.PMR.set(0xff);
@@ -358,6 +358,8 @@ pub fn deactivate_irq(irq_id: usize) {
 
 pub fn handle_irq(_vector: usize) {
     if let Some(vector) = GIC.lock().pending_irq() {
+        // 1. if is maintainance intr, handle by hypervisor,
+        // 2. else inject to guest.
         // HANDLERS.handle(vector);
         // GIC.eoi(vector);
     }

@@ -67,7 +67,7 @@ impl<H: RvmHal> RvmPerCpu<H> {
         if !self.is_enabled() {
             rvm_err!(BadState, "virtualization is not enabled")
         } else {
-            RvmVcpu::new(&self.arch, entry, npt_root)
+            RvmVcpu::new(&self.arch, entry, npt_root, self._cpu_id as u64)
         }
     }
 }

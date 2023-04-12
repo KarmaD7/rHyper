@@ -22,6 +22,7 @@ pub struct ArmVcpu<H: RvmHal> {
     pub elr: u64,
     spsr: u64,
     host_stack_top: u64,
+    pub cpu_id: u64,
     _phantom_data: PhantomData<H>,
 }
 
@@ -30,6 +31,7 @@ impl<H: RvmHal> ArmVcpu<H> {
         _percpu: &ArchPerCpuState<H>,
         entry: GuestPhysAddr,
         npt_root: HostPhysAddr,
+        cpu_id: u64,
     ) -> RvmResult<Self> {
         let vcpu = Self {
             host_stack_top: 0,
@@ -42,6 +44,7 @@ impl<H: RvmHal> ArmVcpu<H> {
                 + SPSR_EL2::I::Masked
                 + SPSR_EL2::F::Masked)
                 .into(),
+            cpu_id,
             _phantom_data: PhantomData,
         };
         info!("npt root is {:x}.", npt_root);
@@ -107,7 +110,7 @@ impl<H: RvmHal> ArmVcpu<H> {
         CNTHCTL_EL2.modify(CNTHCTL_EL2::EL1PCEN::SET + CNTHCTL_EL2::EL1PCTEN::SET);
         CNTVOFF_EL2.set(0);
         HCR_EL2.write(
-            HCR_EL2::VM::Enable + HCR_EL2::RW::EL1IsAarch64 + HCR_EL2::AMO::SET + HCR_EL2::FMO::SET,
+            HCR_EL2::VM::Enable + HCR_EL2::RW::EL1IsAarch64 + HCR_EL2::AMO::SET + HCR_EL2::FMO::SET + HCR_EL2::IMO::SET,
         );
 
         let vtcr_flags = VTCR_EL2::TG0::Granule4KB
