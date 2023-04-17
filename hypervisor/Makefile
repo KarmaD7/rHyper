@@ -6,7 +6,7 @@ GUEST ?= nimbos
 
 GUEST_IMG_NIMBOS ?= ../bin/nimbos.bin
 GUEST_IMG_1 ?= ../bin/arceos-helloworld.bin
-GUEST_IMG_2 ?= ../bin/arceos-memtest_qemu.bin
+GUEST_IMG_2 ?= ../bin/arceos-httpserver-single.bin
 
 export ARCH
 export MODE
@@ -22,6 +22,10 @@ endif
 
 OBJDUMP := rust-objdump -d --print-imm-hex --x86-asm-syntax=intel
 OBJCOPY := rust-objcopy --binary-architecture=$(ARCH)
+
+FS ?= n
+NET ?= n
+GRAPHIC ?= n
 
 
 ifeq ($(shell uname), Darwin)
@@ -46,6 +50,12 @@ ifeq ($(GUEST), nimbos)
 else 
 	qemu_args += -device loader,addr=0x4001000,file=$(GUEST_IMG_1),force-raw=on
 	qemu_args += -device loader,addr=0x4101000,file=$(GUEST_IMG_2),force-raw=on
+endif
+
+ifeq ($(NET), y)
+	qemu_args += \
+		-device virtio-net-device,netdev=net0 \
+		-netdev user,id=net0,hostfwd=tcp::5555-:5555
 endif
 
 build: $(target_bin)

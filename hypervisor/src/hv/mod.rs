@@ -4,6 +4,8 @@ mod gpm;
 mod hal;
 mod vmexit;
 
+use core::sync::atomic::Ordering;
+
 use rvm::{GuestPhysAddr, HostPhysAddr, HostVirtAddr, MemFlags, RvmPerCpu, RvmResult};
 
 use self::gconfig::*;
@@ -19,6 +21,8 @@ struct AlignedMemory<const LEN: usize>([u8; LEN]);
 
 static mut GUEST_PHYS_MEMORY: [AlignedMemory<GUEST_PHYS_MEMORY_SIZE>; CPU_NUM] =
     [AlignedMemory([0; GUEST_PHYS_MEMORY_SIZE]); CPU_NUM];
+
+// pub static mut VIRTIO_HEADERS: AlignedMemory<VIRTIO_HEADER_TOTAL_SIZE> = AlignedMemory([0; VIRTIO_HEADER_TOTAL_SIZE]);
 
 fn gpa_as_mut_ptr(guest_paddr: GuestPhysAddr, cpu_id: usize) -> *mut u8 {
     let offset = unsafe { &GUEST_PHYS_MEMORY[cpu_id] as *const _ as usize };
@@ -63,7 +67,7 @@ fn load_guest_image(hpa: HostPhysAddr, load_gpa: GuestPhysAddr, size: usize, cpu
 //     // );
 // }
 
-fn setup_gpm(cpu_id: usize) -> RvmResult<GuestPhysMemorySet> {
+fn setup_gpm(cpu_id: usize) -> RvmResult<HostPhysAddr> {
     // setup_guest_page_table();
     // debug!("Set guest page table.");
 
@@ -121,11 +125,24 @@ fn setup_gpm(cpu_id: usize) -> RvmResult<GuestPhysMemorySet> {
             flags: MemFlags::READ | MemFlags::WRITE | MemFlags::DEVICE,
         },
     ];
-    for r in guest_memory_regions.into_iter() {
-        info!("mapping");
-        gpm.map_region(r.into())?;
+
+    let guest_id = CPU_PARTITION[cpu_id];
+    // TODO: keep atomic
+    let mut gpms = GUEST_GPM.lock();
+    // let guest_gpm = &mut gpm_guard[guest_id];
+    if let Some(gpm) = &gpms[guest_id] {
+        Ok(gpm.nest_page_table_root())
+        // Err(rvm::RvmError::OutOfMemory)
+    } else {
+        for r in guest_memory_regions.into_iter() {
+            info!("mapping");
+            gpm.map_region(r.into())?;
+        }
+        let root = gpm.nest_page_table_root();
+        gpms[guest_id] = Some(gpm);
+        Ok(root)    
     }
-    Ok(gpm)
+
 }
 
 pub fn run(cpu_id: usize) -> ! {
@@ -137,12 +154,12 @@ pub fn run(cpu_id: usize) -> ! {
     debug!("Vcpu Created.");
 
     if cpu_id == 0 {}
-    let gpm = setup_gpm(cpu_id).unwrap();
+    let npt_root = setup_gpm(cpu_id).unwrap();
     // info!("{:#x?}", gpm);
     debug!("Setup GPM.");
 
     let mut vcpu = percpu
-        .create_vcpu(GUEST_ENTRY, gpm.nest_page_table_root())
+        .create_vcpu(GUEST_ENTRY, npt_root)
         .unwrap();
     // vcpu.set_page_table_root(GUEST_PT1);
     // vcpu.set_stack_pointer(GUEST_STACK_TOP);

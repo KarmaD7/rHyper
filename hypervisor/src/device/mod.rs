@@ -1,5 +1,6 @@
 pub mod gicv2;
 pub mod pl011;
+pub mod blk;
 
 pub use gicv2 as intr;
 pub use pl011 as uart;
