@@ -5,8 +5,9 @@ SMP ?= 1
 GUEST ?= nimbos
 
 GUEST_IMG_NIMBOS ?= ../bin/nimbos.bin
-GUEST_IMG_1 ?= ../bin/arceos-helloworld.bin
-GUEST_IMG_2 ?= ../bin/arceos-httpserver-single.bin
+GUEST_IMG_1 ?= ../bin/arceos-shell.bin
+GUEST_IMG_2 ?= ../bin/arceos-shell.bin
+DISK_IMG ?= ../bin/disk.img
 
 export ARCH
 export MODE
@@ -57,6 +58,12 @@ ifeq ($(NET), y)
 	qemu_args += \
 		-device virtio-net-device,netdev=net0 \
 		-netdev user,id=net0,hostfwd=tcp::5555-:5555
+endif
+
+ifeq ($(FS), y)
+	qemu_args += \
+		-device virtio-blk-device,drive=disk0 \
+		-drive id=disk0,if=none,format=raw,file=$(DISK_IMG)
 endif
 
 build: $(target_bin)
