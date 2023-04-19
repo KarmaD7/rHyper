@@ -26,6 +26,7 @@ OBJCOPY := rust-objcopy --binary-architecture=$(ARCH)
 FS ?= n
 NET ?= n
 GRAPHIC ?= n
+DUMPDTB ?= n
 
 
 ifeq ($(shell uname), Darwin)

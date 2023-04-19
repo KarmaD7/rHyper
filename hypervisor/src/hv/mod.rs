@@ -119,11 +119,19 @@ fn setup_gpm(cpu_id: usize) -> RvmResult<HostPhysAddr> {
             flags: MemFlags::READ | MemFlags::WRITE | MemFlags::DEVICE,
         },
         GuestMemoryRegion {
+            // VirtIO Transport
             gpa: 0x0a00_0000,
             hpa: 0x0a00_0000,
             size: 0x4000,
             flags: MemFlags::READ | MemFlags::WRITE | MemFlags::DEVICE,
         },
+        GuestMemoryRegion {
+            // Platform BUS
+            gpa: 0x0c00_0000,
+            hpa: 0x0c00_0000,
+            size: 0x2000000,
+            flags: MemFlags::READ | MemFlags::WRITE | MemFlags::DEVICE,
+        }
     ];
 
     let guest_id = CPU_PARTITION[cpu_id];

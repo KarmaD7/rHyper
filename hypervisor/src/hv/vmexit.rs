@@ -110,7 +110,9 @@ pub fn vmexit_handler(vcpu: &mut Vcpu) -> RvmResult {
 pub fn irq_handler() -> RvmResult {
     // info!("IRQ routed to EL2");
     if let Some(irq_id) = pending_irq() {
-        // info!("IRQ {} routed to EL2", irq_id);
+        if irq_id != 30 {
+            info!("IRQ {} routed to EL2", irq_id);
+        }
         deactivate_irq(irq_id);
         inject_irq(irq_id);
     }
