@@ -270,7 +270,7 @@ impl Gic {
                 }
                 continue;
             }
-            
+
             // overlap
             let lr_val = self.read_lr(i) as usize;
             if (i & LR_VIRTIRQ_MASK) == irq_id {
@@ -278,7 +278,7 @@ impl Gic {
             }
         }
         // info!("To Inject IRQ {}, find lr {}", irq_id, lr_idx);
-        
+
         if lr_idx == -1 {
             return;
         } else {

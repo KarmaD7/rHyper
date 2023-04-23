@@ -1,12 +1,21 @@
 use alloc::{sync::Arc, vec, vec::Vec};
 
+use super::gpm::GuestPhysMemorySet;
+
 mod pl011;
 mod vgic;
+mod virtio;
 
 pub trait MMIODevice: Send + Sync {
     fn mem_range(&self) -> core::ops::Range<usize>;
     fn read(&self, addr: usize, access_size: u8) -> rvm::RvmResult<u32>;
-    fn write(&self, addr: usize, val: u32, access_size: u8) -> rvm::RvmResult;
+    fn write(
+        &self,
+        addr: usize,
+        val: u32,
+        access_size: u8,
+        gpm: &GuestPhysMemorySet,
+    ) -> rvm::RvmResult;
 }
 
 pub struct VirtDeviceList {
@@ -17,6 +26,7 @@ lazy_static::lazy_static! {
     static ref VIRT_DEVICES: VirtDeviceList = VirtDeviceList {
         mmio_devices: vec![
             Arc::new(pl011::Pl011::new(0x0900_0000)),
+            Arc::new(virtio::Virtio::new(0x0a00_0000))
         ]
     };
 }

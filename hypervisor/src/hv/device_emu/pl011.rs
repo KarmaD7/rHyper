@@ -1,7 +1,10 @@
 use rvm::RvmResult;
 use spin::Mutex;
 
-use crate::device::{console_getchar, console_putchar};
+use crate::{
+    device::{console_getchar, console_putchar},
+    hv::gpm::GuestPhysMemorySet,
+};
 
 use super::MMIODevice;
 
@@ -117,7 +120,7 @@ impl MMIODevice for Pl011 {
         Ok(ret as u32)
     }
 
-    fn write(&self, addr: usize, val: u32, access_size: u8) -> RvmResult {
+    fn write(&self, addr: usize, val: u32, access_size: u8, _: &GuestPhysMemorySet) -> RvmResult {
         debug!("pl011 write mock, addr: {:#x}", addr);
         match addr - self.base_vaddr {
             PL011_DR => console_putchar(val as u8),

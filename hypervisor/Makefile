@@ -36,7 +36,7 @@ else
 	GDB := gdb-multiarch
 endif
 
-qemu := qemu-system-$(ARCH)
+qemu := ../../qemu/build/aarch64-softmmu/qemu-system-$(ARCH)
 qemu_args := -nographic -m 512M
 
 ifeq ($(ARCH), aarch64)
@@ -65,6 +65,15 @@ ifeq ($(FS), y)
 		-device virtio-blk-device,drive=disk0 \
 		-drive id=disk0,if=none,format=raw,file=$(DISK_IMG)
 endif
+
+# qemu_args += \
+#     --trace "virtio_blk_handle_request" \
+#     --trace "virtio_blk_handle_read" \
+# 	--trace "virtio_blk_handle_write" \
+# 	--trace "virtio_notify" \
+# 	--trace "virtio_queue_notify" \
+# 	--trace "virtio_blk_data_plane_start" \
+# 	--trace "virtio_blk_req_complete"
 
 build: $(target_bin)
 

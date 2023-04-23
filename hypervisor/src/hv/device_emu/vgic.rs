@@ -5,6 +5,8 @@ use tock_registers::{
     registers::{ReadOnly, ReadWrite, WriteOnly},
 };
 
+use crate::hv::gpm::GuestPhysMemorySet;
+
 use super::MMIODevice;
 
 pub struct Vgic {
@@ -99,10 +101,10 @@ impl MMIODevice for Vgic {
         Ok(val)
     }
 
-    fn write(&self, addr: usize, val: u32, access_size: u8) -> RvmResult {
+    fn write(&self, addr: usize, val: u32, access_size: u8, _: &GuestPhysMemorySet) -> RvmResult {
         match addr - self.base_vaddr {
             CTLR => self.inner.lock().enabled = val != 0,
-            _ => {},
+            _ => {}
         }
         Ok(())
         // todo!()

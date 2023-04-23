@@ -15,7 +15,6 @@ use crate::arch::instructions;
 use crate::config::CPU_NUM;
 use crate::mm::address::{phys_to_virt, virt_to_phys};
 
-#[repr(align(4096))]
 #[derive(Clone, Copy)]
 struct AlignedMemory<const LEN: usize>([u8; LEN]);
 
@@ -97,13 +96,13 @@ fn setup_gpm(cpu_id: usize) -> RvmResult<HostPhysAddr> {
             size: GUEST_PHYS_MEMORY_SIZE,
             flags: MemFlags::READ | MemFlags::WRITE | MemFlags::EXECUTE,
         },
-        GuestMemoryRegion {
-            // pl011
-            gpa: 0x0900_0000,
-            hpa: 0x0900_0000,
-            size: 0x1000,
-            flags: MemFlags::READ | MemFlags::WRITE | MemFlags::DEVICE,
-        },
+        // GuestMemoryRegion {
+        //     // pl011
+        //     gpa: 0x0900_0000,
+        //     hpa: 0x0900_0000,
+        //     size: 0x1000,
+        //     flags: MemFlags::READ | MemFlags::WRITE | MemFlags::DEVICE,
+        // },
         GuestMemoryRegion {
             // GICD -> emulate
             gpa: 0x0800_0000,
@@ -118,20 +117,13 @@ fn setup_gpm(cpu_id: usize) -> RvmResult<HostPhysAddr> {
             size: 0x10000,
             flags: MemFlags::READ | MemFlags::WRITE | MemFlags::DEVICE,
         },
-        GuestMemoryRegion {
-            // VirtIO Transport
-            gpa: 0x0a00_0000,
-            hpa: 0x0a00_0000,
-            size: 0x4000,
-            flags: MemFlags::READ | MemFlags::WRITE | MemFlags::DEVICE,
-        },
-        GuestMemoryRegion {
-            // Platform BUS
-            gpa: 0x0c00_0000,
-            hpa: 0x0c00_0000,
-            size: 0x2000000,
-            flags: MemFlags::READ | MemFlags::WRITE | MemFlags::DEVICE,
-        }
+        // GuestMemoryRegion {
+        //     // VirtIO Transport
+        //     gpa: 0x0a00_0000,
+        //     hpa: 0x0a00_0000,
+        //     size: 0x4000,
+        //     flags: MemFlags::READ | MemFlags::WRITE | MemFlags::DEVICE,
+        // },
     ];
 
     let guest_id = CPU_PARTITION[cpu_id];
@@ -148,9 +140,8 @@ fn setup_gpm(cpu_id: usize) -> RvmResult<HostPhysAddr> {
         }
         let root = gpm.nest_page_table_root();
         gpms[guest_id] = Some(gpm);
-        Ok(root)    
+        Ok(root)
     }
-
 }
 
 pub fn run(cpu_id: usize) -> ! {
@@ -166,9 +157,7 @@ pub fn run(cpu_id: usize) -> ! {
     // info!("{:#x?}", gpm);
     debug!("Setup GPM.");
 
-    let mut vcpu = percpu
-        .create_vcpu(GUEST_ENTRY, npt_root)
-        .unwrap();
+    let mut vcpu = percpu.create_vcpu(GUEST_ENTRY, npt_root).unwrap();
     // vcpu.set_page_table_root(GUEST_PT1);
     // vcpu.set_stack_pointer(GUEST_STACK_TOP);
     // info!("{:#x?}", vcpu);

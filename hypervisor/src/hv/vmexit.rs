@@ -7,9 +7,12 @@ use crate::{
     hv::device_emu::all_virt_devices,
 };
 
-use super::hal::RvmHalImpl;
+use super::{
+    gconfig::{CPU_PARTITION, GUEST_GPM},
+    hal::RvmHalImpl,
+};
 
-type Vcpu = RvmVcpu<RvmHalImpl>;
+pub type Vcpu = RvmVcpu<RvmHalImpl>;
 
 fn handle_hypercall(vcpu: &mut Vcpu) -> RvmResult {
     let regs = vcpu.regs();
@@ -58,11 +61,18 @@ fn handle_dabt(vcpu: &mut Vcpu) -> RvmResult {
         0
     };
 
-    if let Some(dev) = all_virt_devices().find_mmio_device(fault_vaddr as usize)
-    {
+    if let Some(dev) = all_virt_devices().find_mmio_device(fault_vaddr as usize) {
         // info!("iss {:x} is write {}", iss, is_write);
         if is_write == 1 {
-            dev.write(fault_vaddr as usize, val as u32, size)?;
+            let cpu_id = vcpu.cpu_id;
+            let guest_id = CPU_PARTITION[cpu_id as usize];
+            let mut gpms = GUEST_GPM.lock();
+            // let guest_gpm = &mut gpm_guard[guest_id];
+            if let Some(gpm) = &gpms[guest_id] {
+                dev.write(fault_vaddr as usize, val as u32, size, gpm)?;
+            } else {
+                error!("Guest Without GPM!");
+            };
         } else {
             vcpu.regs_mut().x[srt as usize] = dev.read(fault_vaddr as usize, size)? as u64;
             // info!("elr {:x} srt {:x} read val {:x}", vcpu.elr, srt, vcpu.regs().x[srt as usize]);

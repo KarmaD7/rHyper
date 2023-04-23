@@ -1,6 +1,10 @@
 use core::{marker::PhantomData, ptr::NonNull};
 
-use virtio_drivers::{transport::{Transport, mmio::VirtIOHeader}, Hal, device::blk::VirtIOBlk as InnerDev};
+use virtio_drivers::{
+    device::blk::VirtIOBlk as InnerDev,
+    transport::{mmio::VirtIOHeader, Transport},
+    Hal,
+};
 
 use super::VirtIODevice;
 
@@ -23,6 +27,4 @@ impl<H: Hal, T: Transport> VirtIOBlkDevice<H, T> {
     }
 }
 
-pub fn init() {
-    
-}
+pub fn init() {}

@@ -130,6 +130,10 @@ impl GuestPhysMemorySet {
         true
     }
 
+    pub fn gpa_to_hpa(&self, gpa: GuestPhysAddr) -> HostPhysAddr {
+        self.npt.query(gpa).unwrap().0
+    }
+
     pub fn map_region(&mut self, region: MapRegion) -> RvmResult {
         if region.size == 0 {
             return Ok(());
