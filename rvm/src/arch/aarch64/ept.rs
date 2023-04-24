@@ -13,7 +13,7 @@ bitflags::bitflags! {
         /// (not a 2M, 1G block)
         const NON_BLOCK =   1 << 1;
         /// Memory attributes index field.
-        const ATTR_INDX =   0b1111 << 2;
+        const ATTR      =   0b1111 << 2;
         /// Access permission: accessable at EL0/1, Read / Write.
         const S2AP_R      =   1 << 6;
         /// Access permission: accessable at EL0/1, Write.
@@ -141,7 +141,7 @@ impl GenericPTE for PageTableEntry {
     fn new_table(paddr: HostPhysAddr) -> Self {
         let attr = DescriptorAttr::NON_BLOCK
             | DescriptorAttr::VALID
-            | DescriptorAttr::ATTR_INDX
+            | DescriptorAttr::ATTR
             | DescriptorAttr::S2AP_R
             | DescriptorAttr::S2AP_W
             | DescriptorAttr::AF

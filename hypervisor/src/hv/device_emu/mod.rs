@@ -5,6 +5,7 @@ use super::gpm::GuestPhysMemorySet;
 mod pl011;
 mod vgic;
 mod virtio;
+// mod virt_queue;
 
 pub trait MMIODevice: Send + Sync {
     fn mem_range(&self) -> core::ops::Range<usize>;

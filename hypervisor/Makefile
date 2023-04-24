@@ -5,7 +5,7 @@ SMP ?= 1
 GUEST ?= nimbos
 
 GUEST_IMG_NIMBOS ?= ../bin/nimbos.bin
-GUEST_IMG_1 ?= ../bin/arceos-shell.bin
+GUEST_IMG_1 ?= ../bin/arceos-httpserver-single.bin
 GUEST_IMG_2 ?= ../bin/arceos-shell.bin
 DISK_IMG ?= ../bin/disk.img
 

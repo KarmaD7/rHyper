@@ -8,6 +8,7 @@ use crate::{hv::{gpm::GuestPhysMemorySet, gconfig::VIRTIO_HEADER_EACH_SIZE}, mm:
 use super::MMIODevice;
 
 const VIRTIO_LEGACY_PFN: usize = 0x40;
+const VIRTIO_NOTIFY: usize = 0x50;
 const VIRTIO_DESC_LOW: usize = 0x80;
 const VIRTIO_DESC_HIGH: usize = 0x84;
 const VIRTIO_DRIVER_LOW: usize = 0x90;
@@ -28,6 +29,7 @@ struct VirtQueueAddr {
     driver_gpa_high: Option<u32>,
     device_gpa_low: Option<u32>,
     device_gpa_high: Option<u32>,
+    legacy_vqaddr: usize,
 }
 
 impl VirtQueueAddr {
@@ -39,6 +41,7 @@ impl VirtQueueAddr {
             driver_gpa_high: None,
             device_gpa_low: None,
             device_gpa_high: None,
+            legacy_vqaddr: 0,
         }
     }
 }
@@ -121,9 +124,13 @@ impl MMIODevice for Virtio {
         info!("virtio write addr {:x}, offset {:x}", addr, addr - self.base_vaddr);
         match (addr - self.base_vaddr) % VIRTIO_HEADER_EACH_SIZE {
             // todo: use marco
+            // VIRTIO_NOTIFY => {
+
+            // }
             VIRTIO_LEGACY_PFN => {
                 let gpaddr = val as usize * PAGE_SIZE;
                 if gpaddr == 0 {
+                    loop { }
                     return Ok(());
                 }
                 info!("legacy gpaddr 0x{:x}", gpaddr);
@@ -131,6 +138,7 @@ impl MMIODevice for Virtio {
                 info!("legacy gpaddr 0x{:x} hpaddr 0x{:x}", gpaddr, hpaddr);
                 info!("legacy gpaddr next page 0x{:x} hpaddr 0x{:x}", gpaddr + 0x1000, gpm.gpa_to_hpa(gpaddr + 0x1000));
                 let hpfn = hpaddr / PAGE_SIZE;
+                self.virt_queue_addr.lock().legacy_vqaddr = hpaddr;
                 unsafe { *(addr as *mut u32) = hpfn as u32; }
             }
             VIRTIO_DESC_LOW => {
