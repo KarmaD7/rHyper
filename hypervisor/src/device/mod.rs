@@ -16,5 +16,5 @@ pub fn init_early() {
 
 pub fn init() {
     gicv2::init();
-    // smmu::init();
+    smmu::init();
 }

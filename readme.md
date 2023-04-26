@@ -11,4 +11,4 @@ A hypervisor based on AArch64 & implemented in rust.
 * [x] basic SMP
 * [ ] advanced vGIC
 * [ ] advanced SMP
-* [ ] Device Virtualization: VirtIO
+* [ ] Device Virtualization: VirtIO, SMMU

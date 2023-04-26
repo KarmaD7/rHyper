@@ -42,7 +42,7 @@ qemu_args := -nographic -m 512M
 ifeq ($(ARCH), aarch64)
 	qemu_args += \
 		-cpu cortex-a72 \
-		-machine type=virt,virtualization=on \
+		-machine type=virt,virtualization=on,iommu=smmuv3 \
 		-kernel $(target_bin) \
 		-smp $(SMP)
 endif
