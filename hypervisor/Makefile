@@ -1,7 +1,7 @@
 ARCH ?= aarch64
 MODE ?= release
 LOG ?= warn
-SMP ?= 1
+SMP ?= 2
 GUEST ?= nimbos
 
 GUEST_IMG_NIMBOS ?= ../bin/nimbos.bin

@@ -1,4 +1,2 @@
 #[repr(C)]
-pub struct StreamTableEntry {
-
-}
+pub struct StreamTableEntry {}

@@ -3,7 +3,11 @@
 use rvm::RvmResult;
 use spin::Mutex;
 // maybe TODO
-use tock_registers::{register_structs, registers::{ReadWrite, ReadOnly}, interfaces::{Readable, Writeable}};
+use tock_registers::{
+    interfaces::{Readable, Writeable},
+    register_structs,
+    registers::{ReadOnly, ReadWrite},
+};
 
 use crate::mm::VirtAddr;
 use crate::utils::LazyInit;
@@ -37,7 +41,7 @@ register_structs! {
         (0x00a0 => EVTQBASE: ReadWrite<u64>),
         (0x00a8 => _unused_4),
         (0x100a4 => EVTQHEAD: ReadWrite<u32>),
-        (0x100a8 => EVTQTAIL: ReadWrite<u32>), 
+        (0x100a8 => EVTQTAIL: ReadWrite<u32>),
         (0x100ac => @END),
     }
 }
@@ -87,16 +91,21 @@ struct Smmu {
     // cmd_queue: Mutex<SmmuQueue>,
     // event_queue: SmmuQueue, // queue size will be known at runtime
 
-    // ste_tables: todo 
+    // ste_tables: todo
 }
 
 impl Smmu {
     pub fn new(base_vaddr: VirtAddr) -> Self {
-        Self { base_vaddr, features: IDR0Features::empty(), cmd_queue_size: 0, event_queue_size: 0 }
+        Self {
+            base_vaddr,
+            features: IDR0Features::empty(),
+            cmd_queue_size: 0,
+            event_queue_size: 0,
+        }
     }
 
     const fn regs(&self) -> &Smmuv3Regs {
-        unsafe { &*(self.base_vaddr as *const _)}
+        unsafe { &*(self.base_vaddr as *const _) }
     }
 
     fn init_features(&mut self) -> RvmResult {
@@ -105,26 +114,29 @@ impl Smmu {
         if !self.features.contains(IDR0Features::S2P) {
             return Err(rvm::RvmError::Unsupported);
         }
-        
+
         let idr1_features = IDR1Features::from_bits_truncate(self.regs().IDR1.get());
         info!("SMMU IDR1 features: {:?}", idr1_features);
-        if idr1_features.intersects(IDR1Features::QUEUES_PRESET | IDR1Features::TABLES_PRESET | IDR1Features::REL) {
+        if idr1_features.intersects(
+            IDR1Features::QUEUES_PRESET | IDR1Features::TABLES_PRESET | IDR1Features::REL,
+        ) {
             return Err(rvm::RvmError::Unsupported);
         }
 
         self.cmd_queue_size = (idr1_features.bits() & IDR1Features::CMDQS.bits()) >> 21;
         self.event_queue_size = (idr1_features.bits() & IDR1Features::EVTQS.bits()) >> 16;
-        info!("cmdqs {}, evtqs {}", self.cmd_queue_size, self.event_queue_size);
+        info!(
+            "cmdqs {}, evtqs {}",
+            self.cmd_queue_size, self.event_queue_size
+        );
 
         Ok(())
     }
 
     fn setup_stream_table(&mut self) -> RvmResult {
-        
         // only one-level stream table is supported now.
 
         Ok(())
-
     }
 
     fn setup_queue(&mut self) -> RvmResult {
@@ -137,13 +149,13 @@ impl Smmu {
         // TODO: stream table setup
 
         // TODO: cmdq and evtq setup
-        
-        // let cr0 = 
+
+        // let cr0 =
         // self.regs().STBASE.set(fu)
         self.regs().CR0.set(CR0_SMMUEN);
         Ok(())
     }
- 
+
     fn init(&mut self) -> RvmResult {
         self.init_features()?;
         self.setup_queue()?;

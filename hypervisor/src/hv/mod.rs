@@ -15,6 +15,7 @@ use crate::arch::instructions;
 use crate::config::CPU_NUM;
 use crate::mm::address::{phys_to_virt, virt_to_phys};
 
+#[repr(align(4096))]
 #[derive(Clone, Copy)]
 struct AlignedMemory<const LEN: usize>([u8; LEN]);
 
@@ -35,10 +36,9 @@ fn load_guest_image(hpa: HostPhysAddr, load_gpa: GuestPhysAddr, size: usize, cpu
     let image_ptr = phys_to_virt(hpa) as *const u8;
     let image = unsafe { core::slice::from_raw_parts(image_ptr, size) };
     unsafe {
-        // core::slice::from_raw_parts_mut(gpa_as_mut_ptr(load_gpa, cpu_id), size)
-        //     .copy_from_slice(image)
-        core::slice::from_raw_parts_mut(load_gpa as *mut _, size)
+        core::slice::from_raw_parts_mut(gpa_as_mut_ptr(load_gpa, cpu_id), size)
             .copy_from_slice(image)
+        // core::slice::from_raw_parts_mut(load_gpa as *mut _, size).copy_from_slice(image)
     }
 }
 
@@ -94,18 +94,17 @@ fn setup_gpm(cpu_id: usize) -> RvmResult<HostPhysAddr> {
         GuestMemoryRegion {
             // RAM
             gpa: GUEST_PHYS_MEMORY_BASE,
-            hpa: GUEST_PHYS_MEMORY_BASE,
-            // hpa: virt_to_phys(gpa_as_mut_ptr(GUEST_PHYS_MEMORY_BASE, cpu_id) as HostVirtAddr),
+            hpa: virt_to_phys(gpa_as_mut_ptr(GUEST_PHYS_MEMORY_BASE, cpu_id) as HostVirtAddr),
             size: GUEST_PHYS_MEMORY_SIZE,
             flags: MemFlags::READ | MemFlags::WRITE | MemFlags::EXECUTE,
         },
-        // GuestMemoryRegion {
-        //     // pl011
-        //     gpa: 0x0900_0000,
-        //     hpa: 0x0900_0000,
-        //     size: 0x1000,
-        //     flags: MemFlags::READ | MemFlags::WRITE | MemFlags::DEVICE,
-        // },
+        GuestMemoryRegion {
+            // pl011
+            gpa: 0x0900_0000,
+            hpa: 0x0900_0000,
+            size: 0x1000,
+            flags: MemFlags::READ | MemFlags::WRITE | MemFlags::DEVICE,
+        },
         GuestMemoryRegion {
             // GICD -> emulate
             gpa: 0x0800_0000,

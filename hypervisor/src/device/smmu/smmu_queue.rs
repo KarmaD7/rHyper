@@ -10,7 +10,7 @@ struct EventQueueEntry {
     idx: usize,
 }
 
-// trait 
+// trait
 
 pub struct SmmuQueue {
     smmu_base_addr: VirtAddr,
@@ -22,9 +22,7 @@ pub struct SmmuQueue {
 
 impl SmmuQueue {
     // fn new(base_vaddr) {
-        
-    // }
-    fn push() {
 
-    }
+    // }
+    fn push() {}
 }

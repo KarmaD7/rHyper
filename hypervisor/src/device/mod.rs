@@ -1,7 +1,7 @@
 pub mod gicv2;
 pub mod pl011;
-pub mod virtio;
 pub mod smmu;
+pub mod virtio;
 
 pub use gicv2 as intr;
 pub use pl011 as uart;
@@ -16,5 +16,5 @@ pub fn init_early() {
 
 pub fn init() {
     gicv2::init();
-    smmu::init();
+    // smmu::init();
 }
