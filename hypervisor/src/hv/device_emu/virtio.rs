@@ -2,6 +2,7 @@ use core::arch::asm;
 
 use aarch64_cpu::asm;
 use spin::Mutex;
+use alloc::{collections::BTreeMap, vec, vec::Vec};
 
 use crate::{
     hv::{gconfig::VIRTIO_HEADER_EACH_SIZE, gpm::GuestPhysMemorySet},
@@ -10,6 +11,7 @@ use crate::{
 
 use super::MMIODevice;
 
+const VIRTIO_QUEUE_SEL: usize = 0x30;
 const VIRTIO_QUEUE_SIZE: usize = 0x38;
 const VIRTIO_LEGACY_PFN: usize = 0x40;
 const VIRTIO_NOTIFY: usize = 0x50;
@@ -51,9 +53,11 @@ struct VirtQueueInfo {
     driver_gpa_high: Option<u32>,
     device_gpa_low: Option<u32>,
     device_gpa_high: Option<u32>,
-    legacy_vqaddr: usize,
-    queue_size: u32,
-    last_notified_idx: u16,
+    legacy_vqaddr: BTreeMap<u32, usize>,
+    queue_sel: u32,
+    queue_size: BTreeMap<u32, u32>,
+    last_notified_idx: BTreeMap<u32, u16>,
+    translated: BTreeMap<u32, Vec<usize>>,
 }
 
 impl VirtQueueInfo {
@@ -65,9 +69,11 @@ impl VirtQueueInfo {
             driver_gpa_high: None,
             device_gpa_low: None,
             device_gpa_high: None,
-            legacy_vqaddr: 0,
-            queue_size: 0,
-            last_notified_idx: 0,
+            legacy_vqaddr: BTreeMap::new(),
+            queue_sel: 0,
+            queue_size: BTreeMap::new(),
+            last_notified_idx: BTreeMap::new(),
+            translated: BTreeMap::new(),
         }
     }
 }
@@ -129,41 +135,30 @@ impl Virtio {
         }
     }
 
-    fn translate_desc_addr(&self, gpm: &GuestPhysMemorySet) {
+    fn translate_desc_addr(&self, queue_sel: u32, gpm: &GuestPhysMemorySet) {
         // now only legacy devices are supported.
+        // Note: in crate Virtio_drivers, unset desc buf will clear addr and len to 0.
+        // Is it a specification of Virtio?
+        // info!("notify queue sel {}", queue_sel);
+        
         let mut queue_info = self.virt_queue_info.lock();
         unsafe {
             let desc_queue = core::slice::from_raw_parts_mut(
-                queue_info.legacy_vqaddr as *mut Descriptor,
-                queue_info.queue_size as usize,
+                queue_info.legacy_vqaddr[&queue_sel] as *mut Descriptor,
+                queue_info.queue_size[&queue_sel] as usize,
             );
-            loop {
-                let idx = queue_info.last_notified_idx as u32 & (queue_info.queue_size - 1);
-                let gpaddr = desc_queue[idx as usize].addr;
-                info!(
-                    "to translate descqueue idx {} from gpa 0x{:x}",
-                    idx, gpaddr
-                );
-                let flags = desc_queue[idx as usize].flags;
-                for i in 0..3 {
-                    info!(
-                        "descqueue idx {} gpa 0x{:x} flag {:?}",
-                        i, desc_queue[i].addr, desc_queue[i].flags
-                    );
-                }
-                let hpaddr = gpm.gpa_to_hpa(gpaddr as usize);
-                info!(
-                    "Translating descqueue idx {} flags {:?} from gpa 0x{:x} to hpa 0x{:x}",
-                    idx, flags, gpaddr, hpaddr
-                );
-                desc_queue[idx as usize].addr = hpaddr as u64;
-                queue_info.last_notified_idx += 1;
-                if !flags.contains(DescFlags::NEXT) {
-                    // If the guest os use non-blocking read/write, we need to maintaining last_notified_idx by looking used and avail.
-                    // As now arceos just use blocking read/write, we simply set last_notified_idx to 0, for all the elements 
-                    // would have been poped before next request.
-                    queue_info.last_notified_idx = 0;
-                    break;
+            let queue_size = queue_info.queue_size[&queue_sel];
+            let hpaddrs = queue_info.translated.entry(queue_sel).or_insert(vec![0; queue_size as usize]);
+            for i in 0..queue_size {
+                if desc_queue[i as usize].len != 0 && desc_queue[i as usize].addr != 0 {
+                    // valid
+                    let gpa = desc_queue[i as usize].addr;
+                    if hpaddrs[i as usize] == 0 || hpaddrs[i as usize] != desc_queue[i as usize].addr as usize {
+                        // question: what if another desc's gpa equal to hpa?(to handle)
+                        let hpaddr = gpm.gpa_to_hpa(gpa as usize);
+                        hpaddrs[i as usize] = hpaddr;
+                        desc_queue[i as usize].addr = hpaddr as u64;
+                    }
                 }
             }
         }
@@ -172,7 +167,7 @@ impl Virtio {
 
 impl MMIODevice for Virtio {
     fn mem_range(&self) -> core::ops::Range<usize> {
-        self.base_vaddr..self.base_vaddr + 0x4000
+        self.base_vaddr..self.base_vaddr + 0x200
     }
 
     fn read(&self, addr: usize, access_size: u8) -> rvm::RvmResult<u32> {
@@ -194,8 +189,18 @@ impl MMIODevice for Virtio {
         );
         match (addr - self.base_vaddr) % VIRTIO_HEADER_EACH_SIZE {
             // todo: use marco
+            VIRTIO_QUEUE_SEL => {
+                let mut queue_info = self.virt_queue_info.lock();
+                queue_info.queue_sel = val;
+                queue_info.last_notified_idx.entry(val).or_insert(0);
+                unsafe {
+                    *(addr as *mut u32) = val;
+                }
+            }
             VIRTIO_QUEUE_SIZE => {
-                self.virt_queue_info.lock().queue_size = val;
+                let mut queue_info = self.virt_queue_info.lock();
+                let idx = queue_info.queue_sel;
+                queue_info.queue_size.insert(idx, val);
                 trace!("Virt Queue Size: {}", val);
                 unsafe {
                     *(addr as *mut u32) = val;
@@ -203,23 +208,26 @@ impl MMIODevice for Virtio {
             }
             VIRTIO_NOTIFY => {
                 trace!("notify");
-                self.translate_desc_addr(gpm);
+                self.translate_desc_addr(val, gpm);
                 unsafe {
                     *(addr as *mut u32) = val;
                 }
             }
             VIRTIO_LEGACY_PFN => {
                 let gpaddr = val as usize * PAGE_SIZE;
-                trace!("legacy gpaddr 0x{:x}", gpaddr);
+                info!("legacy gpaddr 0x{:x}", gpaddr);
                 let hpaddr = gpm.gpa_to_hpa(gpaddr);
-                trace!("legacy gpaddr 0x{:x} hpaddr 0x{:x}", gpaddr, hpaddr);
+                info!("legacy gpaddr 0x{:x} hpaddr 0x{:x}", gpaddr, hpaddr);
                 trace!(
                     "legacy gpaddr next page 0x{:x} hpaddr 0x{:x}",
                     gpaddr + 0x1000,
                     gpm.gpa_to_hpa(gpaddr + 0x1000)
                 );
                 let hpfn = hpaddr / PAGE_SIZE;
-                self.virt_queue_info.lock().legacy_vqaddr = hpaddr;
+                let mut queue_info = self.virt_queue_info.lock();
+                let idx = queue_info.queue_sel;
+                info!("Write {}'s pfn", idx);
+                queue_info.legacy_vqaddr.insert(idx, hpaddr);
                 unsafe {
                     *(addr as *mut u32) = hpfn as u32;
                 }
