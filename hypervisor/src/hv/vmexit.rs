@@ -1,27 +1,47 @@
-use aarch64_cpu::registers::{ESR_EL2, FAR_EL2};
+use aarch64_cpu::{registers::{ESR_EL2, FAR_EL2}, asm::barrier};
 use rvm::{RvmResult, RvmVcpu};
 use tock_registers::interfaces::Readable;
 
 use crate::{
     device::{gicv2::deactivate_irq, inject_irq, pending_irq},
-    hv::device_emu::all_virt_devices,
+    hv::device_emu::all_virt_devices, platform::psci::{PSCI_CPU_ON, PSCI_CPU_OFF, psci_start_cpu}, config::{GUEST_ENTRIES, PSCI_CONTEXT},
 };
 
 use super::{
-    gconfig::{CPU_PARTITION, GUEST_GPM},
+    gconfig::{GUEST_GPM},
     hal::RvmHalImpl,
 };
+use crate::config::CPU_TO_VM;
 
 pub type Vcpu = RvmVcpu<RvmHalImpl>;
 
 fn handle_hypercall(vcpu: &mut Vcpu) -> RvmResult {
-    let regs = vcpu.regs();
+    let cpu_id = vcpu.cpu_id();
+    let mut regs = vcpu.regs_mut();
     info!(
         "VM exit: VMCALL({:#x}): {:?}",
         regs.x[0],
         [regs.x[1], regs.x[2], regs.x[3], regs.x[4]]
     );
-    match regs.x[0] {
+    match regs.x[0] as usize  {
+        PSCI_CPU_ON => {
+            warn!("guest call psci on");
+            // we assume vcpuid are continous
+            let guest_gpms = GUEST_GPM.lock();
+            if let Some(gpm) = &guest_gpms[CPU_TO_VM[cpu_id as usize]] {
+            // if let Some(gpm) = &guest_gpm {
+                let pcpu_id = regs.x[1] as usize + cpu_id as usize;
+                // let entry = gpm.gpa_to_hpa(regs.x[2] as usize);
+                info!("pcpuid {}, entry gpa {:x}", pcpu_id, regs.x[2]);
+                unsafe { 
+                    PSCI_CONTEXT[pcpu_id] = regs.x[3] as usize;
+                    barrier::dsb(barrier::SY); // necessary for WMM
+                    GUEST_ENTRIES[pcpu_id] = regs.x[2] as usize;
+                }
+                // psci_start_cpu(regs.x[1] as usize + cpu_id as usize, entry);
+                regs.x[0] = 0;
+            }
+        },
         PSCI_CPU_OFF => loop {},
         _ => {}
     }
@@ -65,7 +85,7 @@ fn handle_dabt(vcpu: &mut Vcpu) -> RvmResult {
         // info!("iss {:x} is write {}", iss, is_write);
         if is_write == 1 {
             let cpu_id = vcpu.cpu_id;
-            let guest_id = CPU_PARTITION[cpu_id as usize];
+            let guest_id = CPU_TO_VM[cpu_id as usize];
             let mut gpms = GUEST_GPM.lock();
             // let guest_gpm = &mut gpm_guard[guest_id];
             if let Some(gpm) = &gpms[guest_id] {

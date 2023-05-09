@@ -22,7 +22,5 @@ pub const VIRTIO_HEADER_EACH_SIZE: usize = 0x200;
 pub const VIRTIO_BLK_IDX: usize = 0;
 pub const VIRTIO_NET_IDX: usize = 1;
 
-pub const CPU_PARTITION: [usize; 2] = [0, 1];
-
 const NONE: Option<GuestPhysMemorySet> = None;
-pub static GUEST_GPM: Mutex<[Option<GuestPhysMemorySet>; 2]> = Mutex::new([NONE; 2]);
+pub static GUEST_GPM: Mutex<[Option<GuestPhysMemorySet>; CPU_NUM]> = Mutex::new([NONE; CPU_NUM]);

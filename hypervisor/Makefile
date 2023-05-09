@@ -7,6 +7,7 @@ GUEST ?= nimbos
 GUEST_IMG_NIMBOS ?= ../bin/nimbos.bin
 GUEST_IMG_1 ?= ../bin/arceos-httpserver-single.bin
 GUEST_IMG_2 ?= ../bin/arceos-shell.bin
+GUEST_IMG_3 ?= ../bin/arceos-parallel-dual.bin
 DISK_IMG ?= ../bin/disk.img
 
 export ARCH
@@ -37,7 +38,7 @@ else
 endif
 
 qemu := ../../qemu/build/aarch64-softmmu/qemu-system-$(ARCH)
-qemu_args := -nographic -m 512M
+qemu_args := -nographic -m 1G
 
 ifeq ($(ARCH), aarch64)
 	qemu_args += \
@@ -52,6 +53,7 @@ ifeq ($(GUEST), nimbos)
 else 
 	qemu_args += -device loader,addr=0x4001000,file=$(GUEST_IMG_1),force-raw=on
 	qemu_args += -device loader,addr=0x4101000,file=$(GUEST_IMG_2),force-raw=on
+	qemu_args += -device loader,addr=0x4201000,file=$(GUEST_IMG_3),force-raw=on
 endif
 
 ifeq ($(NET), y)

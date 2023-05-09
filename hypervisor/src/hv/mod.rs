@@ -1,5 +1,5 @@
 mod device_emu;
-mod gconfig;
+pub mod gconfig;
 mod gpm;
 mod hal;
 mod vmexit;
@@ -12,7 +12,7 @@ use self::gconfig::*;
 use self::gpm::{GuestMemoryRegion, GuestPhysMemorySet};
 use self::hal::RvmHalImpl;
 use crate::arch::instructions;
-use crate::config::CPU_NUM;
+use crate::config::{CPU_NUM, CPU_TO_VM};
 use crate::mm::address::{phys_to_virt, virt_to_phys};
 
 #[repr(align(4096))]
@@ -106,7 +106,7 @@ fn setup_gpm(cpu_id: usize) -> RvmResult<HostPhysAddr> {
             flags: MemFlags::READ | MemFlags::WRITE | MemFlags::DEVICE,
         },
         GuestMemoryRegion {
-            // GICD -> emulate
+            // TODO: GICD -> emulate
             gpa: 0x0800_0000,
             hpa: 0x0800_0000,
             size: 0x10000,
@@ -128,7 +128,7 @@ fn setup_gpm(cpu_id: usize) -> RvmResult<HostPhysAddr> {
         // },
     ];
 
-    let guest_id = CPU_PARTITION[cpu_id];
+    let guest_id = CPU_TO_VM[cpu_id];
     // TODO: keep atomic
     let mut gpms = GUEST_GPM.lock();
     // let guest_gpm = &mut gpm_guard[guest_id];
@@ -146,7 +146,7 @@ fn setup_gpm(cpu_id: usize) -> RvmResult<HostPhysAddr> {
     }
 }
 
-pub fn run(cpu_id: usize) -> ! {
+pub fn run(cpu_id: usize, entry: usize, psci_context: usize) -> ! {
     println!("Starting virtualization...");
     println!("Hardware support: {:?}", rvm::has_hardware_support());
 
@@ -159,10 +159,20 @@ pub fn run(cpu_id: usize) -> ! {
     // info!("{:#x?}", gpm);
     debug!("Setup GPM.");
 
-    let mut vcpu = percpu.create_vcpu(GUEST_ENTRY, npt_root).unwrap();
+    let vcpu_id = cpu_id - CPU_TO_VM[cpu_id];
+    info!("run vcpuid {}", vcpu_id);
+    // TODO: move this to vcpu init
+    unsafe {
+        core::arch::asm!(
+            "msr vmpidr_el2, {}", in(reg) vcpu_id
+        );
+    }
+    let mut vcpu = percpu.create_vcpu(entry, npt_root).unwrap();
     // vcpu.set_page_table_root(GUEST_PT1);
     // vcpu.set_stack_pointer(GUEST_STACK_TOP);
     // info!("{:#x?}", vcpu);
+    // TODO: move this to create_vcpu
+    vcpu.regs_mut().x[0] = psci_context as u64;
     instructions::flush_tlb_all();
     println!("Running guest...");
     vcpu.run();

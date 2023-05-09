@@ -72,6 +72,10 @@ impl<H: RvmHal> ArmVcpu<H> {
         Ok(())
     }
 
+    pub fn cpu_id(&self) -> u64 {
+        self.cpu_id
+    }
+
     pub fn regs(&self) -> &GeneralRegisters {
         &self.guest_regs
     }

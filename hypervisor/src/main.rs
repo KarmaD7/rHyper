@@ -29,9 +29,10 @@ use arch::instructions::wait_for_ints;
 use device::console_putchar;
 use spin::Mutex;
 
-use crate::platform::mp::start_secondary_cpus;
+use crate::{platform::mp::start_secondary_cpus, hv::gconfig::GUEST_ENTRY, config::{GUEST_ENTRIES, PSCI_CONTEXT}};
 
 static INIT_OK: AtomicBool = AtomicBool::new(false);
+
 
 const LOGO: &str = r"
 
@@ -103,7 +104,7 @@ fn rust_main(cpu_id: usize) {
     INIT_OK.store(true, Ordering::SeqCst);
     info!("Initialization completed.\n");
     start_secondary_cpus(cpu_id);
-    hv::run(cpu_id);
+    hv::run(cpu_id, GUEST_ENTRY, 0);
     // arch::instructions::wait_for_ints();
 }
 
@@ -113,7 +114,14 @@ fn rust_main_secondary(cpu_id: usize) {
     arch::init();
     device::init();
     info!("Hello World from cpu {}", cpu_id);
-    hv::run(cpu_id);
+    // Safety: Modify to usize is atomic; there is most one writer at the same time.
+    unsafe {
+        while GUEST_ENTRIES[cpu_id] == 0 {
+            trace!("secondary cpu {} waiting", cpu_id);
+        }
+        info!("secondary cpu {} will run a vcpu with entry 0x{:x}", cpu_id, GUEST_ENTRIES[cpu_id]);
+        hv::run(cpu_id, GUEST_ENTRIES[cpu_id], PSCI_CONTEXT[cpu_id]);
+    }
     // console_putchar('z' as u8);
     // console_putchar('b' as u8);
     // console_putchar('d' as u8);
