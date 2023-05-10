@@ -91,6 +91,7 @@ impl MMIODevice for Pl011 {
         debug!("pl011 read mock, addr: {:#x}", addr);
         let ret = match addr - self.base_vaddr {
             PL011_DR => {
+                debug!("READING PL011 DR");
                 let mut fifo = self.fifo.lock();
                 if fifo.is_empty() {
                     0

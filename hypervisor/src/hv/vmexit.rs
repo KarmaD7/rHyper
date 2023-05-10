@@ -83,7 +83,9 @@ fn handle_dabt(vcpu: &mut Vcpu) -> RvmResult {
         0
     };
 
-    if let Some(dev) = all_virt_devices().find_mmio_device(fault_vaddr as usize) {
+    if let Some(dev) =
+        all_virt_devices(CPU_TO_VM[vcpu.cpu_id as usize]).find_mmio_device(fault_vaddr as usize)
+    {
         // info!("iss {:x} is write {}", iss, is_write);
         if is_write == 1 {
             let cpu_id = vcpu.cpu_id;

@@ -11,7 +11,6 @@ use super::MMIODevice;
 
 pub struct Vgic {
     base_vaddr: usize,
-    gicd_size: usize,
     // TODO
     inner: Mutex<VgicdInner>,
 }
@@ -34,10 +33,9 @@ const GICD_IIDR: usize = 0x08;
 
 // copy from gicv2.rs.
 impl Vgic {
-    pub const fn new(base_vaddr: usize, gicd_size: usize) -> Self {
+    pub const fn new(base_vaddr: usize) -> Self {
         Self {
             base_vaddr,
-            gicd_size,
             inner: Mutex::new(VgicdInner::new()),
         }
     }
@@ -45,7 +43,7 @@ impl Vgic {
 
 impl MMIODevice for Vgic {
     fn mem_range(&self) -> core::ops::Range<usize> {
-        self.base_vaddr..self.base_vaddr + self.gicd_size
+        self.base_vaddr..self.base_vaddr + 0x10000
     }
 
     fn read(&self, addr: usize, access_size: u8) -> RvmResult<u32> {

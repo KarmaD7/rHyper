@@ -1,10 +1,16 @@
 use alloc::{sync::Arc, vec, vec::Vec};
 
+use crate::{
+    config::{CPU_NUM, GUEST_NUM},
+    hv::gconfig::{VIRTIO_HEADER_EACH_SIZE, VIRTIO_HEADER_TOTAL_SIZE},
+};
+
 use super::gpm::GuestPhysMemorySet;
 
 mod pl011;
 mod vgic;
 mod virtio;
+mod dummy;
 // mod virt_queue;
 
 pub trait MMIODevice: Send + Sync {
@@ -25,45 +31,31 @@ pub struct VirtDeviceList {
 
 lazy_static::lazy_static! {
     // TODO: attach different devices to VM
-    static ref VIRT_DEVICES: VirtDeviceList = VirtDeviceList {
+
+    static ref VIRT_DEVICES: [VirtDeviceList; GUEST_NUM] = [VirtDeviceList {
         mmio_devices: vec![
             Arc::new(pl011::Pl011::new(0x0900_0000)),
-            Arc::new(vgic::Vgic::new(0x0800_0000, 0x10000)),
-            // todo: use marco
-            Arc::new(virtio::Virtio::new(0x0a00_0000)),
-            Arc::new(virtio::Virtio::new(0x0a00_0200)),
-            Arc::new(virtio::Virtio::new(0x0a00_0400)),
-            Arc::new(virtio::Virtio::new(0x0a00_0600)),
-            Arc::new(virtio::Virtio::new(0x0a00_0800)),
-            Arc::new(virtio::Virtio::new(0x0a00_0a00)),
-            Arc::new(virtio::Virtio::new(0x0a00_0c00)),
-            Arc::new(virtio::Virtio::new(0x0a00_0e00)),
-            Arc::new(virtio::Virtio::new(0x0a00_1000)),
-            Arc::new(virtio::Virtio::new(0x0a00_1200)),
-            Arc::new(virtio::Virtio::new(0x0a00_1400)),
-            Arc::new(virtio::Virtio::new(0x0a00_1600)),
-            Arc::new(virtio::Virtio::new(0x0a00_1800)),
-            Arc::new(virtio::Virtio::new(0x0a00_1a00)),
-            Arc::new(virtio::Virtio::new(0x0a00_1c00)),
-            Arc::new(virtio::Virtio::new(0x0a00_1e00)),
-            Arc::new(virtio::Virtio::new(0x0a00_2000)),
-            Arc::new(virtio::Virtio::new(0x0a00_2200)),
-            Arc::new(virtio::Virtio::new(0x0a00_2400)),
-            Arc::new(virtio::Virtio::new(0x0a00_2600)),
-            Arc::new(virtio::Virtio::new(0x0a00_2800)),
-            Arc::new(virtio::Virtio::new(0x0a00_2a00)),
-            Arc::new(virtio::Virtio::new(0x0a00_2c00)),
-            Arc::new(virtio::Virtio::new(0x0a00_2e00)),
-            Arc::new(virtio::Virtio::new(0x0a00_3000)),
-            Arc::new(virtio::Virtio::new(0x0a00_3200)),
-            Arc::new(virtio::Virtio::new(0x0a00_3400)),
-            Arc::new(virtio::Virtio::new(0x0a00_3600)),
-            Arc::new(virtio::Virtio::new(0x0a00_3800)),
-            Arc::new(virtio::Virtio::new(0x0a00_3a00)),
-            Arc::new(virtio::Virtio::new(0x0a00_3c00)),
+            Arc::new(vgic::Vgic::new(0x0800_0000)),
+            Arc::new(dummy::Dummy::new(0x0a00_0000, 0x3e00)),
             Arc::new(virtio::Virtio::new(0x0a00_3e00)),
-        ]
-    };
+        ]},
+            // let virtio_nums = VIRTIO_HEADER_TOTAL_SIZE / VIRTIO_HEADER_EACH_SIZE;
+            // let mut virtio_base = 0x0a00_0000;
+            // for i in 0..virtio_nums {
+            //     device_regions.push(Arc::new(virtio::Virtio::new(virtio_base)));
+            //     virtio_base += VIRTIO_HEADER_EACH_SIZE;
+            // }
+            // device_regions,
+        VirtDeviceList {
+            mmio_devices: vec![
+                Arc::new(pl011::Pl011::new(0x0900_0000)),
+                Arc::new(vgic::Vgic::new(0x0800_0000)),
+                Arc::new(dummy::Dummy::new(0x0a00_0000, 0x3c00)),
+                Arc::new(virtio::Virtio::new(0x0a00_3c00)),
+                Arc::new(dummy::Dummy::new(0x0a00_3e00, 0x200)),
+            ]
+        },
+     ];
 }
 
 impl VirtDeviceList {
@@ -74,6 +66,6 @@ impl VirtDeviceList {
     }
 }
 
-pub fn all_virt_devices() -> &'static VirtDeviceList {
-    &VIRT_DEVICES
+pub fn all_virt_devices(vm_id: usize) -> &'static VirtDeviceList {
+    &VIRT_DEVICES[vm_id]
 }
