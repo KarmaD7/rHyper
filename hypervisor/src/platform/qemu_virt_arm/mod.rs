@@ -117,6 +117,8 @@ unsafe extern "C" fn _start() -> ! {
 unsafe extern "C" fn _start_secondary() -> ! {
     core::arch::asm!("
         adrp    x8, boot_stack_top
+        mov     x1, #0
+        msr     vmpidr_el2, x1
 
         mrs     x0, mpidr_el1
         and     x0, x0, #0xffffff

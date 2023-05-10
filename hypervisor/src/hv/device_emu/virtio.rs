@@ -58,6 +58,7 @@ struct VirtQueueInfo {
     queue_size: BTreeMap<u32, u32>,
     last_notified_idx: BTreeMap<u32, u16>,
     translated: BTreeMap<u32, Vec<usize>>,
+    queue_num: usize,
 }
 
 impl VirtQueueInfo {
@@ -74,6 +75,7 @@ impl VirtQueueInfo {
             queue_size: BTreeMap::new(),
             last_notified_idx: BTreeMap::new(),
             translated: BTreeMap::new(),
+            queue_num: 0,
         }
     }
 }
@@ -135,34 +137,42 @@ impl Virtio {
         }
     }
 
-    fn translate_desc_addr(&self, queue_sel: u32, gpm: &GuestPhysMemorySet) {
+    fn translate_desc_addr(&self, _: u32, gpm: &GuestPhysMemorySet) {
         // now only legacy devices are supported.
         // Note: in crate Virtio_drivers, unset desc buf will clear addr and len to 0.
         // Is it a specification of Virtio?
-        // info!("notify queue sel {}", queue_sel);
-
+        // TODO: performance? 
+        
         let mut queue_info = self.virt_queue_info.lock();
-        unsafe {
-            let desc_queue = core::slice::from_raw_parts_mut(
-                queue_info.legacy_vqaddr[&queue_sel] as *mut Descriptor,
-                queue_info.queue_size[&queue_sel] as usize,
-            );
-            let queue_size = queue_info.queue_size[&queue_sel];
-            let hpaddrs = queue_info
-                .translated
-                .entry(queue_sel)
-                .or_insert(vec![0; queue_size as usize]);
-            for i in 0..queue_size {
-                if desc_queue[i as usize].len != 0 && desc_queue[i as usize].addr != 0 {
-                    // valid
-                    let gpa = desc_queue[i as usize].addr;
-                    if hpaddrs[i as usize] == 0
-                        || hpaddrs[i as usize] != desc_queue[i as usize].addr as usize
-                    {
-                        // question: what if another desc's gpa equal to hpa?(to handle)
-                        let hpaddr = gpm.gpa_to_hpa(gpa as usize);
-                        hpaddrs[i as usize] = hpaddr;
-                        desc_queue[i as usize].addr = hpaddr as u64;
+        let queue_idxs: Vec<u32> = queue_info.last_notified_idx.keys().cloned().collect();
+        for queue_sel in queue_idxs {
+            info!("translate queue sel {}", queue_sel);
+            unsafe {
+                let desc_queue = core::slice::from_raw_parts_mut(
+                    queue_info.legacy_vqaddr[&queue_sel] as *mut Descriptor,
+                    queue_info.queue_size[&queue_sel] as usize,
+                );
+                let queue_size = queue_info.queue_size[&queue_sel];
+                let hpaddrs = queue_info
+                    .translated
+                    .entry(queue_sel)
+                    .or_insert(vec![0; queue_size as usize]);
+                // info!("DESC is {:?}", desc_queue);
+                // info!("RECV_QUEUE is {:#?}", recv_queue);
+                // info!("HPADDRS is {:?}", hpaddrs);
+                for i in 0..queue_size {
+                    if desc_queue[i as usize].len != 0 && desc_queue[i as usize].addr != 0 {
+                        // valid
+                        let gpa = desc_queue[i as usize].addr;
+                        if hpaddrs[i as usize] == 0
+                            || hpaddrs[i as usize] != desc_queue[i as usize].addr as usize
+                        {
+                            // question: what if another desc's gpa equal to hpa?(to handle)
+                            info!("translate queue {}", queue_sel);
+                            let hpaddr = gpm.gpa_to_hpa(gpa as usize);
+                            hpaddrs[i as usize] = hpaddr;
+                            desc_queue[i as usize].addr = hpaddr as u64;
+                        }
                     }
                 }
             }
@@ -186,7 +196,6 @@ impl MMIODevice for Virtio {
         access_size: u8,
         gpm: &GuestPhysMemorySet,
     ) -> rvm::RvmResult {
-        // todo!()
         trace!(
             "virtio write addr {:x}, offset {:x}",
             addr,
@@ -213,7 +222,11 @@ impl MMIODevice for Virtio {
             }
             VIRTIO_NOTIFY => {
                 trace!("notify");
-                self.translate_desc_addr(val, gpm);
+                self.translate_desc_addr(0, gpm);
+                // let queue_info = self.virt_queue_info.lock();
+                // letqueue_info.last_notified_idx.iter().for_each(|(id, _)| self.translate_desc_addr(*id, gpm));
+                // self.translate_desc_addr(0, gpm);
+                // self.translate_desc_addr(val, gpm);
                 unsafe {
                     *(addr as *mut u32) = val;
                 }
