@@ -19,7 +19,6 @@ pub struct Vgic {
 #[derive(Default)]
 pub struct VgicdInner {
     enabled: bool,
-
 }
 
 impl VgicdInner {
@@ -28,12 +27,10 @@ impl VgicdInner {
     }
 }
 
-
 // TODO: merge these consts with regs in gicv2.rs.
 const GICD_CTLR: usize = 0x00;
 const GICD_TYPER: usize = 0x04;
 const GICD_IIDR: usize = 0x08;
-// const GICD_
 
 // copy from gicv2.rs.
 impl Vgic {
@@ -53,15 +50,15 @@ impl MMIODevice for Vgic {
 
     fn read(&self, addr: usize, access_size: u8) -> RvmResult<u32> {
         // TODO: read SGI-related registers
+        trace!("GICD read addr 0x{:x}, access size {}", addr, access_size);
         let val = match addr - self.base_vaddr {
-            _ => unsafe {
-                *(addr as *const u32)
-            },
+            _ => unsafe { *(addr as *const u32) },
         };
         Ok(val)
     }
 
     fn write(&self, addr: usize, val: u32, access_size: u8, _: &GuestPhysMemorySet) -> RvmResult {
+        trace!("GICD write addr 0x{:x}, access size {}", addr, access_size);
         // TODO: write SGI
         Ok(())
     }

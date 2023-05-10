@@ -1,4 +1,7 @@
-use crate::{config::{CPU_NUM, CPU_TO_VM, GUEST_ENTRIES}, hv::gconfig::GUEST_ENTRY};
+use crate::{
+    config::{CPU_NUM, CPU_TO_VM, GUEST_ENTRIES},
+    hv::gconfig::GUEST_ENTRY,
+};
 
 use super::psci::psci_start_cpu;
 
@@ -18,7 +21,9 @@ pub fn start_secondary_cpus(primary_cpu_id: usize) {
             debug!("start secondary {}", i);
             start_secondary_cpu(i, entry, 0);
             if !initialized[CPU_TO_VM[i]] {
-               unsafe { GUEST_ENTRIES[i] = GUEST_ENTRY; }
+                unsafe {
+                    GUEST_ENTRIES[i] = GUEST_ENTRY;
+                }
             }
             initialized[CPU_TO_VM[i]] = true;
             // TODO: maintain mapping from vcpuid to cpuid

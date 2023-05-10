@@ -29,10 +29,13 @@ use arch::instructions::wait_for_ints;
 use device::console_putchar;
 use spin::Mutex;
 
-use crate::{platform::mp::start_secondary_cpus, hv::gconfig::GUEST_ENTRY, config::{GUEST_ENTRIES, PSCI_CONTEXT}};
+use crate::{
+    config::{GUEST_ENTRIES, PSCI_CONTEXT},
+    hv::gconfig::GUEST_ENTRY,
+    platform::mp::start_secondary_cpus,
+};
 
 static INIT_OK: AtomicBool = AtomicBool::new(false);
-
 
 const LOGO: &str = r"
 
@@ -119,7 +122,10 @@ fn rust_main_secondary(cpu_id: usize) {
         while GUEST_ENTRIES[cpu_id] == 0 {
             trace!("secondary cpu {} waiting", cpu_id);
         }
-        info!("secondary cpu {} will run a vcpu with entry 0x{:x}", cpu_id, GUEST_ENTRIES[cpu_id]);
+        info!(
+            "secondary cpu {} will run a vcpu with entry 0x{:x}",
+            cpu_id, GUEST_ENTRIES[cpu_id]
+        );
         hv::run(cpu_id, GUEST_ENTRIES[cpu_id], PSCI_CONTEXT[cpu_id]);
     }
     // console_putchar('z' as u8);

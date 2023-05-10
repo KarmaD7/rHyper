@@ -1,16 +1,18 @@
-use aarch64_cpu::{registers::{ESR_EL2, FAR_EL2}, asm::barrier};
+use aarch64_cpu::{
+    asm::barrier,
+    registers::{ESR_EL2, FAR_EL2},
+};
 use rvm::{RvmResult, RvmVcpu};
 use tock_registers::interfaces::Readable;
 
 use crate::{
+    config::{GUEST_ENTRIES, PSCI_CONTEXT},
     device::{gicv2::deactivate_irq, inject_irq, pending_irq},
-    hv::device_emu::all_virt_devices, platform::psci::{PSCI_CPU_ON, PSCI_CPU_OFF, psci_start_cpu}, config::{GUEST_ENTRIES, PSCI_CONTEXT},
+    hv::device_emu::all_virt_devices,
+    platform::psci::{psci_start_cpu, PSCI_CPU_OFF, PSCI_CPU_ON},
 };
 
-use super::{
-    gconfig::{GUEST_GPM},
-    hal::RvmHalImpl,
-};
+use super::{gconfig::GUEST_GPM, hal::RvmHalImpl};
 use crate::config::CPU_TO_VM;
 
 pub type Vcpu = RvmVcpu<RvmHalImpl>;
@@ -23,17 +25,17 @@ fn handle_hypercall(vcpu: &mut Vcpu) -> RvmResult {
         regs.x[0],
         [regs.x[1], regs.x[2], regs.x[3], regs.x[4]]
     );
-    match regs.x[0] as usize  {
+    match regs.x[0] as usize {
         PSCI_CPU_ON => {
             warn!("guest call psci on");
             // we assume vcpuid are continous
             let guest_gpms = GUEST_GPM.lock();
             if let Some(gpm) = &guest_gpms[CPU_TO_VM[cpu_id as usize]] {
-            // if let Some(gpm) = &guest_gpm {
+                // if let Some(gpm) = &guest_gpm {
                 let pcpu_id = regs.x[1] as usize + cpu_id as usize;
                 // let entry = gpm.gpa_to_hpa(regs.x[2] as usize);
                 info!("pcpuid {}, entry gpa {:x}", pcpu_id, regs.x[2]);
-                unsafe { 
+                unsafe {
                     PSCI_CONTEXT[pcpu_id] = regs.x[3] as usize;
                     barrier::dsb(barrier::SY); // necessary for WMM
                     GUEST_ENTRIES[pcpu_id] = regs.x[2] as usize;
@@ -41,7 +43,7 @@ fn handle_hypercall(vcpu: &mut Vcpu) -> RvmResult {
                 // psci_start_cpu(regs.x[1] as usize + cpu_id as usize, entry);
                 regs.x[0] = 0;
             }
-        },
+        }
         PSCI_CPU_OFF => loop {},
         _ => {}
     }
@@ -140,6 +142,7 @@ pub fn vmexit_handler(vcpu: &mut Vcpu) -> RvmResult {
 pub fn irq_handler() -> RvmResult {
     // info!("IRQ routed to EL2");
     if let Some(irq_id) = pending_irq() {
+        // TODO: Judge whether vcpu is running on the vcpu.
         if irq_id != 30 {
             info!("IRQ {} routed to EL2", irq_id);
         }

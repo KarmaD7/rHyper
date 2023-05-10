@@ -21,6 +21,7 @@ const PPI_BASE: usize = 16;
 const SPI_BASE: usize = 32;
 
 const IRQ_COUNT: usize = 1024;
+const TIMER_IRQ: usize = 30;
 
 // mask
 const LR_VIRTIRQ_MASK: usize = 0x3ff;
@@ -342,6 +343,10 @@ pub fn set_enable(vector: usize, enable: bool) {
     GIC.lock().set_enable(vector, enable);
 }
 
+pub fn gicv_enabled() -> bool {
+    GIC.lock().gicv().CTLR.get() & 0x1 != 0
+}
+
 pub fn pending_irq() -> Option<usize> {
     GIC.lock().pending_irq()
 }
@@ -371,6 +376,9 @@ pub fn handle_irq(_vector: usize) {
 
 pub fn init() {
     GIC.lock().init();
+    // ENABLE TIMER IRQ
+    // TODO: move this to timer::init
+    set_enable(TIMER_IRQ, true);
     // let gic = Gic::new(GICD_BASE.into_kvaddr(), GICC_BASE.into_kvaddr());
     // gic.init();
     // GIC.init_by(gic);

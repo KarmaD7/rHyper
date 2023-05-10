@@ -1,8 +1,8 @@
 use core::arch::asm;
 
 use aarch64_cpu::asm;
-use spin::Mutex;
 use alloc::{collections::BTreeMap, vec, vec::Vec};
+use spin::Mutex;
 
 use crate::{
     hv::{gconfig::VIRTIO_HEADER_EACH_SIZE, gpm::GuestPhysMemorySet},
@@ -140,7 +140,7 @@ impl Virtio {
         // Note: in crate Virtio_drivers, unset desc buf will clear addr and len to 0.
         // Is it a specification of Virtio?
         // info!("notify queue sel {}", queue_sel);
-        
+
         let mut queue_info = self.virt_queue_info.lock();
         unsafe {
             let desc_queue = core::slice::from_raw_parts_mut(
@@ -148,12 +148,17 @@ impl Virtio {
                 queue_info.queue_size[&queue_sel] as usize,
             );
             let queue_size = queue_info.queue_size[&queue_sel];
-            let hpaddrs = queue_info.translated.entry(queue_sel).or_insert(vec![0; queue_size as usize]);
+            let hpaddrs = queue_info
+                .translated
+                .entry(queue_sel)
+                .or_insert(vec![0; queue_size as usize]);
             for i in 0..queue_size {
                 if desc_queue[i as usize].len != 0 && desc_queue[i as usize].addr != 0 {
                     // valid
                     let gpa = desc_queue[i as usize].addr;
-                    if hpaddrs[i as usize] == 0 || hpaddrs[i as usize] != desc_queue[i as usize].addr as usize {
+                    if hpaddrs[i as usize] == 0
+                        || hpaddrs[i as usize] != desc_queue[i as usize].addr as usize
+                    {
                         // question: what if another desc's gpa equal to hpa?(to handle)
                         let hpaddr = gpm.gpa_to_hpa(gpa as usize);
                         hpaddrs[i as usize] = hpaddr;

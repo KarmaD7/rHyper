@@ -24,10 +24,11 @@ pub struct VirtDeviceList {
 }
 
 lazy_static::lazy_static! {
+    // TODO: attach different devices to VM
     static ref VIRT_DEVICES: VirtDeviceList = VirtDeviceList {
         mmio_devices: vec![
             Arc::new(pl011::Pl011::new(0x0900_0000)),
-            Arc::new(vgic::Vgic::new(0x0800_0000, 0x1000)),
+            Arc::new(vgic::Vgic::new(0x0800_0000, 0x10000)),
             // todo: use marco
             Arc::new(virtio::Virtio::new(0x0a00_0000)),
             Arc::new(virtio::Virtio::new(0x0a00_0200)),
