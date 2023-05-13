@@ -37,7 +37,7 @@ else
 	GDB := gdb-multiarch
 endif
 
-qemu := ../../qemu/build/aarch64-softmmu/qemu-system-$(ARCH)
+qemu := qemu-system-$(ARCH)
 qemu_args := -nographic -m 1G
 
 ifeq ($(ARCH), aarch64)

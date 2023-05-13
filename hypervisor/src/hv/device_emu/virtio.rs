@@ -146,7 +146,6 @@ impl Virtio {
         let mut queue_info = self.virt_queue_info.lock();
         let queue_idxs: Vec<u32> = queue_info.last_notified_idx.keys().cloned().collect();
         for queue_sel in queue_idxs {
-            info!("translate queue sel {}", queue_sel);
             unsafe {
                 let desc_queue = core::slice::from_raw_parts_mut(
                     queue_info.legacy_vqaddr[&queue_sel] as *mut Descriptor,
@@ -168,7 +167,6 @@ impl Virtio {
                             || hpaddrs[i as usize] != desc_queue[i as usize].addr as usize
                         {
                             // question: what if another desc's gpa equal to hpa?(to handle)
-                            info!("translate queue {}", queue_sel);
                             let hpaddr = gpm.gpa_to_hpa(gpa as usize);
                             hpaddrs[i as usize] = hpaddr;
                             desc_queue[i as usize].addr = hpaddr as u64;
