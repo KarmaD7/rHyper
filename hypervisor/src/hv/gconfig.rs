@@ -1,7 +1,7 @@
 use rvm::{GuestPhysAddr, HostPhysAddr};
 use spin::Mutex;
 
-use crate::config::{CPU_NUM, GUEST_NUM};
+use crate::config::CPU_NUM;
 
 use super::gpm::GuestPhysMemorySet;
 

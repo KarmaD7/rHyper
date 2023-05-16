@@ -55,7 +55,7 @@ impl<H: RvmHal> ArmVcpu<H> {
 
     // #[repr(align(128))]
     pub fn run(&mut self) -> ! {
-        unsafe { self.vmx_launch() }
+        unsafe { self.vm_launch() }
     }
 
     pub fn exit_info(&self) -> RvmResult<ArmExitInfo> {
@@ -65,7 +65,7 @@ impl<H: RvmHal> ArmVcpu<H> {
         })
     }
 
-    pub fn advance_rip(&mut self) -> RvmResult {
+    pub fn advance_pc(&mut self) -> RvmResult {
         let mut elr_el2 = ELR_EL2.get();
         elr_el2 += 4;
         ELR_EL2.set(elr_el2);
@@ -133,7 +133,7 @@ impl<H: RvmHal> ArmVcpu<H> {
     }
 
     #[naked]
-    unsafe extern "C" fn vmx_launch(&mut self) -> ! {
+    unsafe extern "C" fn vm_launch(&mut self) -> ! {
         asm!(
             "mov    x28, sp",
             "str    x28, [x0, {host_stack_top}]",   // save current RSP to Vcpu::host_stack_top
@@ -148,7 +148,7 @@ impl<H: RvmHal> ArmVcpu<H> {
     }
 
     #[naked]
-    unsafe extern "C" fn vmx_exit(&mut self) -> ! {
+    unsafe extern "C" fn vm_exit(&mut self) -> ! {
         asm!(
             save_regs_to_stack!(),
             "mov    x28, sp",                      // save temporary RSP to r15

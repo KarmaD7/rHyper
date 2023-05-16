@@ -50,7 +50,7 @@ impl MMIODevice for Vgic {
         // TODO: read SGI-related registers
         trace!("GICD read addr 0x{:x}, access size {}", addr, access_size);
         let val = match addr - self.base_vaddr {
-            _ => unsafe { *(addr as *const u32) },
+            _ => unsafe { (addr as *const u32).read_volatile() },
         };
         Ok(val)
     }

@@ -1,11 +1,8 @@
-use core::arch::asm;
-
-use aarch64_cpu::asm;
 use alloc::{collections::BTreeMap, vec, vec::Vec};
 use spin::Mutex;
 
 use crate::{
-    hv::{gconfig::VIRTIO_HEADER_EACH_SIZE, gpm::GuestPhysMemorySet},
+    hv::gpm::GuestPhysMemorySet,
     mm::PAGE_SIZE,
 };
 
@@ -25,6 +22,12 @@ const VIRTIO_DEVICE_HIGH: usize = 0xa4;
 pub struct Virtio {
     base_vaddr: usize,
     virt_queue_info: Mutex<VirtQueueInfo>,
+}
+
+macro_rules! write_queue_info {
+    ($object: expr, $field: ident, $val: expr) => {
+        $object.$field = Some($val)
+    };
 }
 
 bitflags::bitflags! {
@@ -88,61 +91,49 @@ impl Virtio {
         }
     }
 
-    fn write_vqaddr(&self, offset: usize, gpm: &GuestPhysMemorySet) {
-        //todo: use macro
-        let vqaddr = self.virt_queue_info.lock();
+    fn write_virtio_modern_addr(&self, offset: usize, gpm: &GuestPhysMemorySet, val: u32) {
+        // This function is untested.
+        let mut queue_info = self.virt_queue_info.lock();
         match offset {
-            VIRTIO_DESC_LOW => {
-                if let (Some(low), Some(high)) = (vqaddr.desc_gpa_low, vqaddr.desc_gpa_high) {
-                    let gpaddr = ((high as usize) << 32) + low as usize;
-                    trace!("desc gpaddr is 0x{:x}", gpaddr);
-                    let hpaddr = gpm.gpa_to_hpa(gpaddr);
-                    unsafe {
-                        *((self.base_vaddr + VIRTIO_DESC_LOW) as *mut u32) = hpaddr as u32;
-                    }
-                    unsafe {
-                        *((self.base_vaddr + VIRTIO_DESC_HIGH) as *mut u32) = (hpaddr >> 32) as u32;
-                    }
-                }
+            VIRTIO_DESC_HIGH => write_queue_info!(queue_info, desc_gpa_high, val),
+            VIRTIO_DESC_LOW => write_queue_info!(queue_info, desc_gpa_low, val),
+            VIRTIO_DEVICE_HIGH => write_queue_info!(queue_info, device_gpa_high, val),
+            VIRTIO_DEVICE_LOW => write_queue_info!(queue_info, device_gpa_low, val),
+            VIRTIO_DRIVER_HIGH => write_queue_info!(queue_info, driver_gpa_high, val),
+            VIRTIO_DEVICE_LOW => write_queue_info!(queue_info, driver_gpa_low, val),
+            _ => unreachable!(),
+        };
+
+        let (qlow, qhigh) = match offset {
+            VIRTIO_DESC_LOW | VIRTIO_DESC_HIGH => {
+                (queue_info.desc_gpa_low, queue_info.desc_gpa_high)
             }
-            VIRTIO_DEVICE_LOW => {
-                if let (Some(low), Some(high)) = (vqaddr.device_gpa_low, vqaddr.device_gpa_high) {
-                    let gpaddr = ((high as usize) << 32) + low as usize;
-                    trace!("device gpaddr is 0x{:x}", gpaddr);
-                    let hpaddr = gpm.gpa_to_hpa(gpaddr);
-                    unsafe {
-                        *((self.base_vaddr + VIRTIO_DEVICE_LOW) as *mut u32) = hpaddr as u32;
-                    }
-                    unsafe {
-                        *((self.base_vaddr + VIRTIO_DEVICE_HIGH) as *mut u32) =
-                            (hpaddr >> 32) as u32;
-                    }
-                }
+            VIRTIO_DEVICE_LOW | VIRTIO_DEVICE_HIGH => {
+                (queue_info.device_gpa_low, queue_info.device_gpa_high)
             }
-            VIRTIO_DRIVER_LOW => {
-                if let (Some(low), Some(high)) = (vqaddr.driver_gpa_low, vqaddr.driver_gpa_high) {
-                    let gpaddr = ((high as usize) << 32) + low as usize;
-                    trace!("driver gpaddr is 0x{:x}", gpaddr);
-                    let hpaddr = gpm.gpa_to_hpa(gpaddr);
-                    unsafe {
-                        *((self.base_vaddr + VIRTIO_DRIVER_LOW) as *mut u32) = hpaddr as u32;
-                    }
-                    unsafe {
-                        *((self.base_vaddr + VIRTIO_DRIVER_HIGH) as *mut u32) =
-                            (hpaddr >> 32) as u32;
-                    }
-                }
+            VIRTIO_DRIVER_LOW | VIRTIO_DRIVER_HIGH => {
+                (queue_info.driver_gpa_low, queue_info.driver_gpa_high)
             }
             _ => unreachable!(),
+        };
+
+        if let (Some(low), Some(high)) = (qlow, qhigh) {
+            let gpaddr = ((high as usize) << 32) + low as usize;
+            let hpaddr = gpm.gpa_to_hpa(gpaddr);
+            unsafe {
+                ((self.base_vaddr + (offset & 0xf0)) as *mut u32).write_volatile(hpaddr as u32);
+                ((self.base_vaddr + (offset & 0xf0) + 0x4) as *mut u32)
+                    .write_volatile((hpaddr >> 32) as u32);
+            }
         }
     }
 
-    fn translate_desc_addr(&self, _: u32, gpm: &GuestPhysMemorySet) {
+    fn translate_desc_addr(&self, gpm: &GuestPhysMemorySet) {
         // now only legacy devices are supported.
         // Note: in crate Virtio_drivers, unset desc buf will clear addr and len to 0.
         // Is it a specification of Virtio?
-        // TODO: performance? 
-        
+        // TODO: performance?
+
         let mut queue_info = self.virt_queue_info.lock();
         let queue_idxs: Vec<u32> = queue_info.last_notified_idx.keys().cloned().collect();
         for queue_sel in queue_idxs {
@@ -152,10 +143,11 @@ impl Virtio {
                     queue_info.queue_size[&queue_sel] as usize,
                 );
                 let queue_size = queue_info.queue_size[&queue_sel];
-                let hpaddrs = queue_info
-                    .translated
-                    .entry(queue_sel)
-                    .or_insert(vec![0; queue_size as usize]);
+                let hpaddrs =
+                    queue_info
+                        .translated
+                        .entry(queue_sel)
+                        .or_insert(vec![0; queue_size as usize]);
                 // info!("DESC is {:?}", desc_queue);
                 // info!("RECV_QUEUE is {:#?}", recv_queue);
                 // info!("HPADDRS is {:?}", hpaddrs);
@@ -184,7 +176,7 @@ impl MMIODevice for Virtio {
     }
 
     fn read(&self, addr: usize, access_size: u8) -> rvm::RvmResult<u32> {
-        Ok(unsafe { *(addr as *const u32) })
+        Ok(unsafe { (addr as *const u32).read_volatile() })
     }
 
     fn write(
@@ -199,14 +191,15 @@ impl MMIODevice for Virtio {
             addr,
             addr - self.base_vaddr
         );
-        match (addr - self.base_vaddr) % VIRTIO_HEADER_EACH_SIZE {
+        let reg_offset = addr - self.base_vaddr;
+        match reg_offset {
             // todo: use marco
             VIRTIO_QUEUE_SEL => {
                 let mut queue_info = self.virt_queue_info.lock();
                 queue_info.queue_sel = val;
                 queue_info.last_notified_idx.entry(val).or_insert(0);
                 unsafe {
-                    *(addr as *mut u32) = val;
+                    (addr as *mut u32).write_volatile(val);
                 }
             }
             VIRTIO_QUEUE_SIZE => {
@@ -215,18 +208,18 @@ impl MMIODevice for Virtio {
                 queue_info.queue_size.insert(idx, val);
                 trace!("Virt Queue Size: {}", val);
                 unsafe {
-                    *(addr as *mut u32) = val;
+                    (addr as *mut u32).write_volatile(val);
                 }
             }
             VIRTIO_NOTIFY => {
                 trace!("notify");
-                self.translate_desc_addr(0, gpm);
+                self.translate_desc_addr(gpm);
                 // let queue_info = self.virt_queue_info.lock();
                 // letqueue_info.last_notified_idx.iter().for_each(|(id, _)| self.translate_desc_addr(*id, gpm));
                 // self.translate_desc_addr(0, gpm);
                 // self.translate_desc_addr(val, gpm);
                 unsafe {
-                    *(addr as *mut u32) = val;
+                    (addr as *mut u32).write_volatile(val);
                 }
             }
             VIRTIO_LEGACY_PFN => {
@@ -234,46 +227,21 @@ impl MMIODevice for Virtio {
                 info!("legacy gpaddr 0x{:x}", gpaddr);
                 let hpaddr = gpm.gpa_to_hpa(gpaddr);
                 info!("legacy gpaddr 0x{:x} hpaddr 0x{:x}", gpaddr, hpaddr);
-                trace!(
-                    "legacy gpaddr next page 0x{:x} hpaddr 0x{:x}",
-                    gpaddr + 0x1000,
-                    gpm.gpa_to_hpa(gpaddr + 0x1000)
-                );
                 let hpfn = hpaddr / PAGE_SIZE;
                 let mut queue_info = self.virt_queue_info.lock();
                 let idx = queue_info.queue_sel;
                 info!("Write {}'s pfn", idx);
                 queue_info.legacy_vqaddr.insert(idx, hpaddr);
                 unsafe {
-                    *(addr as *mut u32) = hpfn as u32;
+                    (addr as *mut u32).write_volatile(hpfn as u32);
                 }
             }
-            VIRTIO_DESC_LOW => {
-                self.virt_queue_info.lock().desc_gpa_low = Some(val);
-                self.write_vqaddr(VIRTIO_DESC_LOW, gpm);
-            }
-            VIRTIO_DESC_HIGH => {
-                self.virt_queue_info.lock().desc_gpa_high = Some(val);
-                self.write_vqaddr(VIRTIO_DESC_LOW, gpm);
-            }
-            VIRTIO_DEVICE_LOW => {
-                self.virt_queue_info.lock().device_gpa_low = Some(val);
-                self.write_vqaddr(VIRTIO_DEVICE_LOW, gpm);
-            }
-            VIRTIO_DEVICE_HIGH => {
-                self.virt_queue_info.lock().device_gpa_high = Some(val);
-                self.write_vqaddr(VIRTIO_DEVICE_LOW, gpm);
-            }
-            VIRTIO_DRIVER_LOW => {
-                self.virt_queue_info.lock().driver_gpa_low = Some(val);
-                self.write_vqaddr(VIRTIO_DRIVER_LOW, gpm);
-            }
-            VIRTIO_DRIVER_HIGH => {
-                self.virt_queue_info.lock().driver_gpa_high = Some(val);
-                self.write_vqaddr(VIRTIO_DRIVER_LOW, gpm);
+            VIRTIO_DESC_LOW | VIRTIO_DESC_HIGH | VIRTIO_DEVICE_LOW | VIRTIO_DEVICE_HIGH
+            | VIRTIO_DRIVER_LOW | VIRTIO_DEVICE_HIGH => {
+                self.write_virtio_modern_addr(reg_offset, gpm, val);
             }
             _ => unsafe {
-                *(addr as *mut u32) = val;
+                (addr as *mut u32).write_volatile(val);
             },
         };
         Ok(())

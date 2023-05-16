@@ -4,8 +4,6 @@ mod gpm;
 mod hal;
 mod vmexit;
 
-use core::sync::atomic::Ordering;
-
 use rvm::{GuestPhysAddr, HostPhysAddr, HostVirtAddr, MemFlags, RvmPerCpu, RvmResult};
 
 use self::gconfig::*;

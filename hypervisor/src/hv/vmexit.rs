@@ -9,7 +9,7 @@ use crate::{
     config::{GUEST_ENTRIES, PSCI_CONTEXT},
     device::{gicv2::deactivate_irq, inject_irq, pending_irq},
     hv::device_emu::all_virt_devices,
-    platform::psci::{psci_start_cpu, PSCI_CPU_OFF, PSCI_CPU_ON},
+    platform::psci::{PSCI_CPU_OFF, PSCI_CPU_ON},
 };
 
 use super::{gconfig::GUEST_GPM, hal::RvmHalImpl};
@@ -101,7 +101,7 @@ fn handle_dabt(vcpu: &mut Vcpu) -> RvmResult {
             vcpu.regs_mut().x[srt as usize] = dev.read(fault_vaddr as usize, size)? as u64;
             // info!("elr {:x} srt {:x} read val {:x}", vcpu.elr, srt, vcpu.regs().x[srt as usize]);
         }
-        vcpu.advance_rip()?;
+        vcpu.advance_pc()?;
         Ok(())
     } else {
         Err(rvm::RvmError::OutOfMemory)

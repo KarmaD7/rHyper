@@ -1,9 +1,4 @@
 use rvm::RvmResult;
-use spin::Mutex;
-use tock_registers::{
-    register_structs,
-    registers::{ReadOnly, ReadWrite, WriteOnly},
-};
 
 use crate::hv::gpm::GuestPhysMemorySet;
 

@@ -1,16 +1,15 @@
 use alloc::{sync::Arc, vec, vec::Vec};
 
 use crate::{
-    config::{CPU_NUM, GUEST_NUM},
-    hv::gconfig::{VIRTIO_HEADER_EACH_SIZE, VIRTIO_HEADER_TOTAL_SIZE},
+    config::VM_NUM,
 };
 
 use super::gpm::GuestPhysMemorySet;
 
+mod dummy;
 mod pl011;
 mod vgic;
 mod virtio;
-mod dummy;
 // mod virt_queue;
 
 pub trait MMIODevice: Send + Sync {
@@ -30,7 +29,7 @@ pub struct VirtDeviceList {
 }
 
 lazy_static::lazy_static! {
-    static ref VIRT_DEVICES: [VirtDeviceList; GUEST_NUM] = [
+    static ref VIRT_DEVICES: [VirtDeviceList; VM_NUM] = [
         VirtDeviceList {
             mmio_devices: vec![
                 Arc::new(pl011::Pl011::new(0x0900_0000)),

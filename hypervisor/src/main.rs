@@ -25,10 +25,6 @@ mod lang_items;
 
 use core::sync::atomic::{AtomicBool, Ordering};
 
-use arch::instructions::wait_for_ints;
-use device::console_putchar;
-use spin::Mutex;
-
 use crate::{
     config::{GUEST_ENTRIES, PSCI_CONTEXT},
     hv::gconfig::GUEST_ENTRY,
