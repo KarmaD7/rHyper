@@ -4,11 +4,15 @@ LOG ?= warn
 SMP ?= 2
 GUEST ?= nimbos
 
-GUEST_IMG_NIMBOS ?= ../bin/nimbos.bin
-GUEST_IMG_1 ?= ../bin/arceos-httpserver-single.bin
-GUEST_IMG_2 ?= ../bin/arceos-shell.bin
-GUEST_IMG_3 ?= ../bin/arceos-parallel-dual.bin
-DISK_IMG ?= ../bin/disk.img
+GUEST_PATH = ../bin
+GUEST_IMG_NIMBOS ?= $(GUEST_PATH)/nimbos.bin
+GUEST_IMG_LINUX ?= $(GUEST_PATH)/Image
+GUEST_IMG_1 ?= $(GUEST_PATH)/arceos-httpserver-single.bin
+GUEST_IMG_2 ?= $(GUEST_PATH)/arceos-shell.bin
+GUEST_IMG_3 ?= $(GUEST_PATH)/arceos-parallel-dual.bin
+DISK_IMG ?= $(GUEST_PATH)/disk.img
+GUEST_LINUX_INITRAMFS ?= $(GUEST_PATH)/initramfs.cpio.gz
+
 
 export ARCH
 export MODE
@@ -38,19 +42,21 @@ else
 endif
 
 qemu := qemu-system-$(ARCH)
-qemu_args := -nographic -m 1G
+qemu_args := -nographic -m 512M
 
 ifeq ($(ARCH), aarch64)
 	qemu_args += \
 		-cpu cortex-a72 \
-		-machine type=virt,virtualization=on,iommu=smmuv3 \
+		-machine type=virt,virtualization=on \
 		-kernel $(target_bin) \
 		-smp $(SMP)
 endif
 
 ifeq ($(GUEST), nimbos)
 	qemu_args += -device loader,addr=0x4001000,file=$(GUEST_IMG_NIMBOS),force-raw=on
-else 
+else ifeq ($(GUEST), linux)
+	qemu_args += -device loader,addr=0x4001000,file=$(GUEST_IMG_LINUX),force-raw=on
+else
 	qemu_args += -device loader,addr=0x4001000,file=$(GUEST_IMG_1),force-raw=on
 	qemu_args += -device loader,addr=0x4101000,file=$(GUEST_IMG_2),force-raw=on
 	qemu_args += -device loader,addr=0x4201000,file=$(GUEST_IMG_3),force-raw=on

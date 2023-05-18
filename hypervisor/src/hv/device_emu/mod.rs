@@ -1,8 +1,6 @@
 use alloc::{sync::Arc, vec, vec::Vec};
 
-use crate::{
-    config::VM_NUM,
-};
+use crate::config::VM_NUM;
 
 use super::gpm::GuestPhysMemorySet;
 
@@ -38,22 +36,22 @@ lazy_static::lazy_static! {
                 Arc::new(virtio::Virtio::new(0x0a00_3e00)),
         ]},
 
-        VirtDeviceList {
-            mmio_devices: vec![
-                Arc::new(pl011::Pl011::new(0x0900_0000)),
-                Arc::new(vgic::Vgic::new(0x0800_0000)),
-                Arc::new(dummy::Dummy::new(0x0a00_0000, 0x3c00)),
-                Arc::new(virtio::Virtio::new(0x0a00_3c00)),
-                Arc::new(dummy::Dummy::new(0x0a00_3e00, 0x200)),
-            ]
-        },
+        // VirtDeviceList {
+        //     mmio_devices: vec![
+        //         Arc::new(pl011::Pl011::new(0x0900_0000)),
+        //         Arc::new(vgic::Vgic::new(0x0800_0000)),
+        //         Arc::new(dummy::Dummy::new(0x0a00_0000, 0x3c00)),
+        //         Arc::new(virtio::Virtio::new(0x0a00_3c00)),
+        //         Arc::new(dummy::Dummy::new(0x0a00_3e00, 0x200)),
+        //     ]
+        // },
 
-        VirtDeviceList {
-            mmio_devices: vec![
-                Arc::new(pl011::Pl011::new(0x0900_0000)),
-                Arc::new(vgic::Vgic::new(0x0800_0000)),
-            ]
-        },
+        // VirtDeviceList {
+        //     mmio_devices: vec![
+        //         Arc::new(pl011::Pl011::new(0x0900_0000)),
+        //         Arc::new(vgic::Vgic::new(0x0800_0000)),
+        //     ]
+        // },
      ];
 }
 

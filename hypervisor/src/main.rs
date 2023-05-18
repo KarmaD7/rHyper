@@ -27,7 +27,7 @@ use core::sync::atomic::{AtomicBool, Ordering};
 
 use crate::{
     config::{GUEST_ENTRIES, PSCI_CONTEXT},
-    hv::gconfig::GUEST_ENTRY,
+    hv::gconfig::{GUEST_DTB, GUEST_DTB_ADDR, GUEST_ENTRY, GUEST_INITRAMFS, GUEST_INITRAMFS_START},
     platform::mp::start_secondary_cpus,
 };
 
@@ -73,7 +73,7 @@ pub fn init_ok() -> bool {
 }
 
 #[no_mangle]
-fn rust_main(cpu_id: usize) {
+fn rust_main(cpu_id: usize, dtb_addr: usize) {
     clear_bss();
     arch::init();
     device::init_early();
@@ -102,8 +102,20 @@ fn rust_main(cpu_id: usize) {
     device::init();
     INIT_OK.store(true, Ordering::SeqCst);
     info!("Initialization completed.\n");
+    info!(
+        "GUEST DTB 0x{:x} to HOST 0x{:x}",
+        GUEST_DTB_ADDR,
+        GUEST_DTB.as_ptr() as usize
+    );
+    info!(
+        "GUEST INITRAMFS 0x{:x} to HOST 0x{:x}",
+        GUEST_INITRAMFS_START,
+        GUEST_INITRAMFS.as_ptr() as usize
+    );
     start_secondary_cpus(cpu_id);
-    hv::run(cpu_id, GUEST_ENTRY, 0);
+    unsafe {
+        hv::run(cpu_id, GUEST_ENTRY, GUEST_DTB_ADDR);
+    }
     // arch::instructions::wait_for_ints();
 }
 

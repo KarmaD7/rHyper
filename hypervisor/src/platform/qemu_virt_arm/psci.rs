@@ -1,5 +1,6 @@
 use core::arch::asm;
 
+pub const PSCI_CPU_HVC_ON: usize = 0xc4000003;
 pub const PSCI_CPU_ON: usize = 0x84000003;
 pub const PSCI_CPU_OFF: usize = 0x84000008;
 

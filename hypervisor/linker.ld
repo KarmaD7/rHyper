@@ -16,6 +16,20 @@ SECTIONS
         etext = .;
     }
 
+    .dtb : {
+        sdtb = .;
+        *(.dtb .dtb.*)
+        . = ALIGN(4K);
+        edtb = .;
+    }
+
+    .initramfs : {
+        sinitramfs = .;
+        *(.initramfs .initramfs.*)
+        . = ALIGN(4K);
+        einitramfs = .;
+    }
+
     .rodata : {
         srodata = .;
         *(.rodata .rodata.*)

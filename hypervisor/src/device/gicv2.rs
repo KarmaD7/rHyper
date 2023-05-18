@@ -278,7 +278,7 @@ impl Gic {
                 return;
             }
         }
-        // info!("To Inject IRQ {}, find lr {}", irq_id, lr_idx);
+        debug!("To Inject IRQ {}, find lr {}", irq_id, lr_idx);
 
         if lr_idx == -1 {
             return;
@@ -379,6 +379,7 @@ pub fn init() {
     // ENABLE TIMER IRQ
     // TODO: move this to timer::init
     set_enable(TIMER_IRQ, true);
+    // set_enable(27, true);
     // let gic = Gic::new(GICD_BASE.into_kvaddr(), GICC_BASE.into_kvaddr());
     // gic.init();
     // GIC.init_by(gic);

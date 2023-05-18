@@ -1,3 +1,5 @@
+use core::arch::asm;
+
 use aarch64_cpu::{
     asm::barrier,
     registers::{ESR_EL2, FAR_EL2},
@@ -9,7 +11,7 @@ use crate::{
     config::{GUEST_ENTRIES, PSCI_CONTEXT},
     device::{gicv2::deactivate_irq, inject_irq, pending_irq},
     hv::device_emu::all_virt_devices,
-    platform::psci::{PSCI_CPU_OFF, PSCI_CPU_ON},
+    platform::psci::{PSCI_CPU_HVC_ON, PSCI_CPU_OFF, PSCI_CPU_ON},
 };
 
 use super::{gconfig::GUEST_GPM, hal::RvmHalImpl};
@@ -26,7 +28,7 @@ fn handle_hypercall(vcpu: &mut Vcpu) -> RvmResult {
         [regs.x[1], regs.x[2], regs.x[3], regs.x[4]]
     );
     match regs.x[0] as usize {
-        PSCI_CPU_ON => {
+        PSCI_CPU_ON | PSCI_CPU_HVC_ON => {
             warn!("guest call psci on");
             // we assume vcpuid are continous
             let guest_gpms = GUEST_GPM.lock();
@@ -65,8 +67,13 @@ fn handle_dabt(vcpu: &mut Vcpu) -> RvmResult {
     // if vcpu.cpu_id != 0 {
     //     info!("cpu {} handling dabt", vcpu.cpu_id);
     // }
-    let fault_vaddr = FAR_EL2.get() & 0xffff_ffff_ffff;
-    // info!("handling dabt, fault addr 0x{:x}", fault_vaddr);
+    let far = FAR_EL2.get() & 0xfff;
+    let mut hpfar: u64 = 0;
+    unsafe {
+        asm!("mrs {}, HPFAR_EL2", out(reg) hpfar);
+    }
+    let fault_vaddr = (hpfar << 8) | far;
+    info!("handling dabt, fault addr 0x{:x}", fault_vaddr);
     let iss = ESR_EL2.read(ESR_EL2::ISS);
     let isv = iss >> 24;
     let sas = iss >> 22 & 0x3;
@@ -142,12 +149,12 @@ pub fn vmexit_handler(vcpu: &mut Vcpu) -> RvmResult {
 
 #[no_mangle]
 pub fn irq_handler() -> RvmResult {
-    // info!("IRQ routed to EL2");
+    debug!("IRQ routed to EL2");
     if let Some(irq_id) = pending_irq() {
         // TODO: Judge whether vcpu is running on the vcpu.
-        if irq_id != 30 {
-            info!("IRQ {} routed to EL2", irq_id);
-        }
+        // if irq_id != 30 {
+        //     info!("IRQ {} routed to EL2", irq_id);
+        // }
         deactivate_irq(irq_id);
         inject_irq(irq_id);
     }

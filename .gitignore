@@ -20,3 +20,6 @@ rvm/Cargo.lock
 
 *.dtb
 *.dts
+
+bin/Image
+bin/*.cpio.gz

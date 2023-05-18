@@ -18,6 +18,8 @@ static mut BOOT_PT_L0: [Stage1PTE; 512] = [Stage1PTE::empty(); 512];
 #[link_section = ".data.boot_page_table"]
 static mut BOOT_PT_L1: [Stage1PTE; 512] = [Stage1PTE::empty(); 512];
 
+// static mut DTB_ADDR: usize = 0;
+
 unsafe fn switch_to_el2() {
     SPSel.write(SPSel::SP::ELx);
     let current_el = CurrentEL.read(CurrentEL::EL);
@@ -86,8 +88,9 @@ unsafe fn init_boot_page_table() {
 #[link_section = ".text.boot"]
 unsafe extern "C" fn _start() -> ! {
     // PC = 0x4008_0000
-    // I don't know why bss.stack is useless.
+    // x0 = DTB_ADDR
     core::arch::asm!("
+        mov     x21, x0
         adrp    x8, boot_stack_top
         mov     sp, x8
 
@@ -100,9 +103,12 @@ unsafe extern "C" fn _start() -> ! {
 
         mrs     x0, mpidr_el1
         and     x0, x0, #0xffffff
+
+        mov     x1, x21
         ldr     x8, ={rust_main}
         blr     x8
         b      .",
+
         switch_to_el2 = sym switch_to_el2,
         init_boot_page_table = sym init_boot_page_table,
         init_mmu = sym init_mmu,

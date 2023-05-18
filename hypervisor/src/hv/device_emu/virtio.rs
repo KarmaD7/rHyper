@@ -1,10 +1,7 @@
 use alloc::{collections::BTreeMap, vec, vec::Vec};
 use spin::Mutex;
 
-use crate::{
-    hv::gpm::GuestPhysMemorySet,
-    mm::PAGE_SIZE,
-};
+use crate::{hv::gpm::GuestPhysMemorySet, mm::PAGE_SIZE};
 
 use super::MMIODevice;
 
