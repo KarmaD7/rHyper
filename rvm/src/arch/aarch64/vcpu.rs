@@ -18,11 +18,10 @@ use super::{regs::GeneralRegisters, ArchPerCpuState};
 #[derive(Debug)]
 pub struct ArmVcpu<H: RvmHal> {
     guest_regs: GeneralRegisters,
-    guest_sp: u64,
+    pub cpu_id: u64,
     pub elr: u64,
     spsr: u64,
     host_stack_top: u64,
-    pub cpu_id: u64,
     _phantom_data: PhantomData<H>,
 }
 
@@ -34,9 +33,7 @@ impl<H: RvmHal> ArmVcpu<H> {
         cpu_id: u64,
     ) -> RvmResult<Self> {
         let vcpu = Self {
-            host_stack_top: 0,
             guest_regs: GeneralRegisters::default(),
-            guest_sp: 0,
             elr: entry as u64,
             spsr: (SPSR_EL2::M::EL1h
                 + SPSR_EL2::D::Masked
@@ -45,6 +42,7 @@ impl<H: RvmHal> ArmVcpu<H> {
                 + SPSR_EL2::F::Masked)
                 .into(),
             cpu_id,
+            host_stack_top: 0,
             _phantom_data: PhantomData,
         };
         info!("npt root is {:x}.", npt_root);
@@ -113,9 +111,10 @@ impl<H: RvmHal> ArmVcpu<H> {
         // Disable EL1 timer traps and the timer offset.
         CNTHCTL_EL2.modify(CNTHCTL_EL2::EL1PCEN::SET + CNTHCTL_EL2::EL1PCTEN::SET);
         CNTVOFF_EL2.set(0);
-        HCR_EL2.write(
-            HCR_EL2::VM::Enable + HCR_EL2::RW::EL1IsAarch64 + HCR_EL2::AMO::SET + HCR_EL2::FMO::SET
-        );
+
+        if !cfg!(feature = "linux") && cfg!(feature = "intr_emulate") {
+            HCR_EL2.modify(HCR_EL2::IMO::SET);
+        }
 
         let vtcr_flags = VTCR_EL2::TG0::Granule4KB
             + VTCR_EL2::SH0::Inner
@@ -136,8 +135,8 @@ impl<H: RvmHal> ArmVcpu<H> {
     unsafe extern "C" fn vm_launch(&mut self) -> ! {
         asm!(
             "mov    x28, sp",
-            "str    x28, [x0, {host_stack_top}]",   // save current RSP to Vcpu::host_stack_top
-            "mov    sp, x0",     // set RSP to guest regs area
+            "str    x28, [x0, {host_stack_top}]",   // save current SP to Vcpu::host_stack_top
+            "mov    sp, x0",     // set SP to guest regs area
             restore_regs_from_stack!(),
             "eret",
             "bl    {failed}",
@@ -147,6 +146,8 @@ impl<H: RvmHal> ArmVcpu<H> {
         )
     }
 
+    // This function is unused currently.
+    // See HANDLE_SYNC in hypervisor/src/arch/aarch64/trap.S.
     #[naked]
     unsafe extern "C" fn vm_exit(&mut self) -> ! {
         asm!(

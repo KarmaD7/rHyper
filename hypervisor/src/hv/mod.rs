@@ -113,14 +113,14 @@ fn setup_gpm(cpu_id: usize) -> RvmResult<HostPhysAddr> {
                 flags: MemFlags::READ | MemFlags::WRITE | MemFlags::DEVICE,
             },
             GuestMemoryRegion {
-                // TODO: GICD -> emulate
+                // GICD
                 gpa: 0x0800_0000,
                 hpa: 0x0800_0000,
                 size: 0x10000,
                 flags: MemFlags::READ | MemFlags::WRITE | MemFlags::DEVICE,
             },
             GuestMemoryRegion {
-                // GICC -> GICV
+                // GICC
                 gpa: 0x0801_0000,
                 hpa: 0x0801_0000,
                 size: 0x10000,
@@ -139,13 +139,7 @@ fn setup_gpm(cpu_id: usize) -> RvmResult<HostPhysAddr> {
                 hpa: GUEST_INITRAMFS.as_ptr() as usize,
                 size: align_up(GUEST_INITRAMFS.len()),
                 flags: MemFlags::READ | MemFlags::WRITE,
-            }, // GuestMemoryRegion {
-               //     // VirtIO Transport
-               //     gpa: 0x0a00_0000,
-               //     hpa: 0x0a00_0000,
-               //     size: 0x4000,
-               //     flags: MemFlags::READ | MemFlags::WRITE | MemFlags::DEVICE,
-               // },
+            },
         ];
         for r in guest_memory_regions.into_iter() {
             info!("mapping");

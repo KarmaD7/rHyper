@@ -2,6 +2,7 @@
 #![no_main]
 #![feature(asm_const, naked_functions)]
 #![feature(panic_info_message, alloc_error_handler)]
+#![allow(dead_code)]
 
 #[macro_use]
 extern crate log;

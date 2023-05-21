@@ -125,10 +125,10 @@ pub fn vmexit_handler(vcpu: &mut Vcpu) -> RvmResult {
 
     let res = match exit_info.exit_reason {
         Some(ESR_EL2::EC::Value::HVC64) => handle_hypercall(vcpu),
-        Some(ESR_EL2::EC::Value::InstrAbortLowerEL) => handle_iabt(vcpu),
-        Some(ESR_EL2::EC::Value::InstrAbortCurrentEL) => handle_iabt(vcpu),
-        Some(ESR_EL2::EC::Value::DataAbortLowerEL) => handle_dabt(vcpu),
-        Some(ESR_EL2::EC::Value::DataAbortCurrentEL) => handle_dabt(vcpu),
+        Some(ESR_EL2::EC::Value::InstrAbortLowerEL)
+        | Some(ESR_EL2::EC::Value::InstrAbortCurrentEL) => handle_iabt(vcpu),
+        Some(ESR_EL2::EC::Value::DataAbortLowerEL)
+        | Some(ESR_EL2::EC::Value::DataAbortCurrentEL) => handle_dabt(vcpu),
         _ => panic!(
             "Unhandled VM-Exit reason {:?}:\n{:#x?}",
             exit_info.exit_reason.unwrap() as u64,

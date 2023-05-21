@@ -24,11 +24,11 @@ impl MMIODevice for Dummy {
         self.base_vaddr..self.base_vaddr + self.dummy_size
     }
 
-    fn read(&self, addr: usize, access_size: u8) -> RvmResult<u32> {
+    fn read(&self, _: usize, _: u8) -> RvmResult<u32> {
         Ok(0)
     }
 
-    fn write(&self, addr: usize, val: u32, access_size: u8, _: &GuestPhysMemorySet) -> RvmResult {
+    fn write(&self, _: usize, _: u32, _: u8, _: &GuestPhysMemorySet) -> RvmResult {
         Ok(())
     }
 }

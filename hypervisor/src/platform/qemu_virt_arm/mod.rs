@@ -36,6 +36,7 @@ unsafe fn switch_to_el2() {
         );
         ELR_EL3.set(LR.get());
         SP_EL1.set(BOOT_STACK.as_ptr_range().end as u64);
+        // This should be SP_EL2. To
         asm::eret();
     }
 }
