@@ -62,11 +62,6 @@ fn handle_iabt(vcpu: &mut Vcpu) -> RvmResult {
 
 #[no_mangle]
 fn handle_dabt(vcpu: &mut Vcpu) -> RvmResult {
-    // we need to add HPFAR_EL2 to aarch64_cpu
-    // FAR_EL2 val is not correct, we use it temporarily
-    // if vcpu.cpu_id != 0 {
-    //     info!("cpu {} handling dabt", vcpu.cpu_id);
-    // }
     let far = FAR_EL2.get() & 0xfff;
     let mut hpfar: u64 = 0;
     unsafe {
@@ -160,6 +155,32 @@ pub fn irq_handler() -> RvmResult {
     }
 
     Ok(())
-    // // let irq_number =
-    // todo!()
+}
+
+#[repr(u8)]
+#[derive(Debug)]
+#[allow(dead_code)]
+enum TrapKind {
+    Synchronous = 0,
+    Irq = 1,
+    Fiq = 2,
+    SError = 3,
+}
+
+#[repr(u8)]
+#[derive(Debug)]
+#[allow(dead_code)]
+enum TrapSource {
+    CurrentSpEl0 = 0,
+    CurrentSpElx = 1,
+    LowerAArch64 = 2,
+    LowerAArch32 = 3,
+}
+
+#[no_mangle]
+fn invalid_exception(tf: &mut Vcpu, kind: TrapKind, source: TrapSource) {
+    panic!(
+        "Invalid exception {:?} from {:?}:\n{:#x?}",
+        kind, source, tf
+    );
 }

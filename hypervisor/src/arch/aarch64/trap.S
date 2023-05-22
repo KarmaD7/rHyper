@@ -48,15 +48,15 @@
     add     sp, sp, 34 * 8
 .endm
 
-// .macro INVALID_EXCP, kind, source
-// .p2align 7
-//     SAVE_REGS
-//     mov     x0, sp
-//     mov     x1, \kind
-//     mov     x2, \source
-//     bl      invalid_exception
-//     b       .Lexception_return
-// .endm
+.macro INVALID_EXCP, kind, source
+.p2align 7
+    SAVE_REGS
+    mov     x0, sp
+    mov     x1, \kind
+    mov     x2, \source
+    bl      invalid_exception
+    b       .Lexception_return
+.endm
 
 .macro HANDLE_SYNC
 .p2align 7
@@ -82,28 +82,28 @@
 .p2align 11
 exception_vector_base:
     // current EL, with SP_EL0
-    HANDLE_SYNC
-    HANDLE_SYNC
-    HANDLE_SYNC
-    HANDLE_SYNC
+    INVALID_EXCP 0 0
+    INVALID_EXCP 1 0
+    INVALID_EXCP 2 0
+    INVALID_EXCP 3 0
 
     // current EL, with SP_ELx
     HANDLE_SYNC
     HANDLE_IRQ
-    HANDLE_SYNC
-    HANDLE_SYNC
+    INVALID_EXCP 2 1
+    INVALID_EXCP 3 1
 
     // lower EL, aarch64
     HANDLE_SYNC
     HANDLE_IRQ
-    HANDLE_SYNC
-    HANDLE_SYNC
+    INVALID_EXCP 2 2
+    INVALID_EXCP 3 2
 
     // lower EL, aarch32
-    HANDLE_SYNC
-    HANDLE_SYNC
-    HANDLE_SYNC
-    HANDLE_SYNC
+    INVALID_EXCP 0 3
+    INVALID_EXCP 1 3
+    INVALID_EXCP 2 3
+    INVALID_EXCP 3 3
 
 .Lexception_return:
     RESTORE_REGS
