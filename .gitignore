@@ -17,9 +17,3 @@ rvm/Cargo.lock
 .DS_Store
 *.asm
 *.ref
-
-*.dtb
-*.dts
-
-bin/Image
-bin/*.cpio.gz
