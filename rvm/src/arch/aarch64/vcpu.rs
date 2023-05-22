@@ -18,10 +18,11 @@ use super::{regs::GeneralRegisters, ArchPerCpuState};
 #[derive(Debug)]
 pub struct ArmVcpu<H: RvmHal> {
     guest_regs: GeneralRegisters,
-    pub cpu_id: u64,
+    guest_sp: u64,
     pub elr: u64,
     spsr: u64,
     host_stack_top: u64,
+    pub cpu_id: u64,
     _phantom_data: PhantomData<H>,
 }
 
@@ -34,6 +35,7 @@ impl<H: RvmHal> ArmVcpu<H> {
     ) -> RvmResult<Self> {
         let vcpu = Self {
             guest_regs: GeneralRegisters::default(),
+            guest_sp: 0,
             elr: entry as u64,
             spsr: (SPSR_EL2::M::EL1h
                 + SPSR_EL2::D::Masked
